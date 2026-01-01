@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>2026 日本探險 • 高級奶茶手札</title>
     <!-- 載入外部依賴 -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -26,8 +26,24 @@
         
         .overlay-backdrop {
             background: rgba(0, 0, 0, 0.9);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        /* 確保底部導覽不會擋住內容 */
+        .content-padding {
+            padding-bottom: 100px;
+        }
+
+        /* 底部固定導覽列樣式 */
+        .fixed-nav {
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            max-width: 390px;
+            z-index: 100;
         }
     </style>
 </head>
@@ -50,7 +66,8 @@
     <script type="text/babel">
         const { useState, useEffect, useMemo, useRef } = React;
 
-        // --- 插圖組件 ---
+        // --- 全域組件與工具函數 ---
+
         const FujiIllustration = () => (
             <svg viewBox="0 0 200 100" className="w-14 h-auto opacity-20 text-[#8B5E3C]">
                 <path d="M20,90 L100,20 L180,90 Z" fill="currentColor" />
@@ -59,7 +76,6 @@
             </svg>
         );
 
-        // --- 核心圖示組件 (徹底修復 Pascal/Kebab 格式) ---
         const Icon = ({ name, size = 16, className = "" }) => {
             const [svgHtml, setSvgHtml] = useState("");
             
@@ -67,19 +83,23 @@
                 let mounted = true;
                 const renderIcon = () => {
                     if (!window.lucide || !window.lucide.icons) {
-                        setTimeout(renderIcon, 100);
+                        setTimeout(renderIcon, 50);
                         return;
                     }
                     
-                    // 名稱轉換與修正
-                    let searchName = name;
-                    if (name === "Flight") searchName = "Plane";
-                    if (name === "MapIcon") searchName = "Map";
-                    if (name === "Transport") searchName = "Train";
+                    const iconMap = {
+                        "Flight": "Plane",
+                        "MapIcon": "Map",
+                        "ImageIcon": "Image",
+                        "Transport": "Train",
+                        "Sightseeing": "Star",
+                        "Food": "Utensils",
+                        "Shopping": "ShoppingBag"
+                    };
                     
-                    // 轉 kebab-case (MapPin -> map-pin)
-                    const kebabName = searchName.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
-                    const iconObj = window.lucide.icons[searchName] || window.lucide.icons[kebabName];
+                    const actualName = iconMap[name] || name;
+                    const kebabName = actualName.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
+                    const iconObj = window.lucide.icons[actualName] || window.lucide.icons[kebabName];
                     
                     if (iconObj && typeof iconObj.toSvg === 'function' && mounted) {
                         setSvgHtml(iconObj.toSvg({
@@ -90,12 +110,29 @@
                         }));
                     }
                 };
-                
                 renderIcon();
                 return () => { mounted = false; };
             }, [name, size, className]);
 
             return <span className="lucide-icon-wrapper flex items-center justify-center shrink-0" dangerouslySetInnerHTML={{ __html: svgHtml }} />;
+        };
+
+        const getMockWeather = (dateStr) => {
+            const day = parseInt(dateStr.split('/')[1]);
+            if (day <= 17) return { icon: <Icon name="Sun" className="text-orange-400"/>, temp: '8°C' };
+            if (day === 18) return { icon: <Icon name="Cloud" className="text-gray-400"/>, temp: '6°C' };
+            return { icon: <Icon name="Snowflake" className="text-blue-200"/>, temp: '-2°C' };
+        };
+
+        const sortedDayTrips = (dayItems) => {
+            return [...dayItems].sort((a, b) => {
+                const getWeight = (t) => {
+                    if (t === '晚餐') return '23:58';
+                    if (t === '住宿') return '23:59';
+                    return t || '00:00';
+                };
+                return getWeight(a.startTime).localeCompare(getWeight(b.startTime));
+            });
         };
 
         const App = () => {
@@ -104,37 +141,8 @@
             const [currentTab, setCurrentTab] = useState('itinerary');
             const [expandedDateIndex, setExpandedDateIndex] = useState(null);
             const [selectedOverlay, setSelectedOverlay] = useState(null);
-            
-            const [trips, setTrips] = useState([]);
-            const [expenses, setExpenses] = useState([]);
-            const [shoppingItems, setShoppingItems] = useState([]);
 
-            const travelers = [
-                { id: 'goldfish', name: '金魚', color: '#8B5E3C', emoji: '🐠' },
-                { id: 'penguin', name: '企鵝', color: '#5D4037', emoji: '🐧' },
-                { id: 'zhi', name: '阿智', color: '#A69076', emoji: '🦉' },
-                { id: 'spasm', name: '痙攣', color: '#D6C5A0', emoji: '⚡' }
-            ];
-            const [activeTraveler, setActiveTraveler] = useState(travelers[0]);
-
-            const [selectedAccDate, setSelectedAccDate] = useState('1/15');
-            const [expRawAmount, setExpRawAmount] = useState('');
-            const [expDesc, setExpDesc] = useState('');
-            const [expType, setExpType] = useState('expense');
-            const [expCategory, setExpCategory] = useState('美食');
-            const [activeShopCategory, setActiveShopCategory] = useState('超市');
-            const [newShopItemName, setNewShopItemName] = useState('');
-
-            // 配置偵測
-            const appId = typeof __app_id !== 'undefined' ? __app_id : 'japan-2026-vFinal-Renamed';
-            const firebaseConfig = (() => {
-                try {
-                    if (typeof __firebase_config !== 'undefined') return JSON.parse(__firebase_config);
-                } catch (e) {}
-                return null;
-            })();
-
-            // --- 核心資料 ---
+            // --- 預設資料 ---
             const dates = [
                 { date: '1/15', weekday: '木', title: '꒰梅田逛逛:.。.☆' },
                 { date: '1/16', weekday: '金', title: '꒰USJ環球影城♡ﾞ' },
@@ -147,22 +155,21 @@
             ];
 
             const defaultTripData = [
-                { dateIndex: 0, startTime: '11:15', name: '搭乘國泰航空', address: '桃園機場一航', category: 'Plane', note: '航班 CX564 | 預訂金魚鵝 DGL2ET / 阿智 DH5MG7' },
-                { dateIndex: 0, startTime: '16:00', name: '出海關 & 領票', address: '關西機場', category: 'Ticket', note: '預訂編號：40376\n需持：信用卡(1668)+4碼密碼+4人護照' },
-                { dateIndex: 0, startTime: '16:30', name: '搭乘 HARUKA', address: '機場 JR 月台', category: 'Train', note: '自由席 | 使用關西周遊券' },
-                { dateIndex: 0, startTime: '17:20', name: '梅田購物', address: 'JR 梅田', category: 'ShoppingBag', note: '晚上就在梅田購物' },
-                { dateIndex: 0, startTime: '晚餐', name: '預計燒肉肉五郎', address: '燒肉 肉五郎 天滿店', category: 'Utensils', note: '營業時間 11:00-23:00\n天滿站步行3分鐘' },
-                { dateIndex: 0, startTime: '住宿', name: '梅田住宿', address: 'https://maps.app.goo.gl/B9W2PwzGhuXaFTso8', category: 'Hotel', note: 'Apartment Hotel 11 Higashi Umeda\n大阪站步行約 12 分鐘' },
-                { dateIndex: 1, startTime: '6:40', name: '飯店出發', address: 'JR 大阪站', category: 'Train', note: '步行約 12 分鐘至站\n搭乘環狀線往西九條\n早餐 7-11' },
-                { dateIndex: 1, startTime: '7:40', name: '抵達環球', address: 'USJ 環球影城', category: 'Star', note: '入園直衝馬力歐園區\n\n【入園須知】\n1. 下載 USJ App 領整理券\n2. 建議 7:00 前抵達現場排隊\n3. 禁帶外食與大容量飲料\n4. 備妥電子門票 QR Code' },
-                { dateIndex: 1, startTime: '20:00', name: '閉園時間', address: '超市', category: 'Utensils', note: '晚餐預計吃超市' },
-                { dateIndex: 1, startTime: '住宿', name: '梅田住宿', address: 'https://maps.app.goo.gl/B9W2PwzGhuXaFTso8', category: 'Hotel', note: 'Apartment Hotel 11 Higashi Umeda\n大阪站步行約 12 分鐘' }
+                { id: 't1', dateIndex: 0, startTime: '11:15', name: '搭乘國泰航空', address: '桃園機場一航', category: 'Plane', note: '航班 CX564 | 預訂金魚鵝 DGL2ET / 阿智 DH5MG7' },
+                { id: 't2', dateIndex: 0, startTime: '16:00', name: '出海關 & 領票', address: '關西機場', category: 'Ticket', note: '預訂編號：40376\n需備：信用卡(1668)+4碼密碼+4人護照' },
+                { id: 't3', dateIndex: 0, startTime: '17:20', name: '梅田購物', address: 'JR 梅田', category: 'ShoppingBag', note: '晚上就在梅田購物' },
+                { id: 't4', dateIndex: 0, startTime: '晚餐', name: '燒肉肉五郎', address: '燒肉 肉五郎 天滿店', category: 'Utensils', note: '營業時間 11:00-23:00' },
+                { id: 't5', dateIndex: 0, startTime: '住宿', name: '梅田住宿', address: 'Apartment Hotel 11 Higashi Umeda', category: 'Hotel', note: '大阪站步行約 12 分鐘' },
+                { id: 't6', dateIndex: 1, startTime: '6:40', name: '飯店出發', address: 'JR 大阪站', category: 'Train', note: '步行 12 分鐘 | 早餐吃 7-11' },
+                { id: 't7', dateIndex: 1, startTime: '7:40', name: '抵達環球', address: 'USJ 環球影城', category: 'Star', note: '入園直衝馬力歐\n【須知】提早1小時排隊、App領整理券' },
+                { id: 't8', dateIndex: 1, startTime: '20:00', name: '閉園時間', address: '超市', category: 'Utensils', note: '晚餐預計吃超市' },
+                { id: 't9', dateIndex: 1, startTime: '住宿', name: '梅田住宿', address: 'Apartment Hotel 11 Higashi Umeda', category: 'Hotel', note: '大阪站步行約 12 分鐘' }
             ];
 
             const staysData = [
-                { name: 'Apartment Hotel 11 Higashi Umeda', period: '1/15 — 1/18', checkIn: '15:00', checkOut: '11:00', distance: '大阪站 12 分鐘', note: '自助密碼鎖' },
+                { name: 'Apartment Hotel 11 Higashi Umeda', period: '1/15 — 1/18', checkIn: '15:00', checkOut: '11:00', distance: '大阪站 12 分鐘', note: '自助密碼鎖入住' },
                 { name: 'Shinjuku sprem', period: '1/18 — 1/19', checkIn: '16:00', checkOut: '10:00', distance: '新宿站 10 分鐘', note: '無電梯' },
-                { name: 'Sotetsu Fresa Inn 善光寺口', period: '1/19 — 1/22', checkIn: '15:00', checkOut: '11:00', distance: '長野站對面', note: '位置極佳' }
+                { name: 'Sotetsu Fresa Inn 善光寺口', period: '1/19 — 1/22', checkIn: '15:00', checkOut: '11:00', distance: '長野站對面', note: '交通極佳' }
             ];
 
             const ticketsData = [
@@ -176,73 +183,75 @@
                 { id: 2, name: '松本清', discount: '最大 7% 折扣', img: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=800' }
             ];
 
-            const usjMapData = { title: '環球影城園區地圖', currentImg: 'https://lh3.googleusercontent.com/d/1PmA35rbRYDdi9hc0ClNl8p4RAioCT32x', type: 'Map' };
+            const travelers = [
+                { id: 'goldfish', name: '金魚', color: '#8B5E3C', emoji: '🐠' },
+                { id: 'penguin', name: '企鵝', color: '#5D4037', emoji: '🐧' },
+                { id: 'zhi', name: '阿智', color: '#A69076', emoji: '🦉' },
+                { id: 'spasm', name: '痙攣', color: '#D6C5A0', emoji: '⚡' }
+            ];
 
-            // --- 排序權重 ---
-            const sortedDayTrips = (dayItems) => {
-                return [...dayItems].sort((a, b) => {
-                    const getWeight = (t) => {
-                        if (t === '晚餐') return '23:58';
-                        if (t === '住宿') return '23:59';
-                        return t || '00:00';
-                    };
-                    return getWeight(a.startTime).localeCompare(getWeight(b.startTime));
-                });
-            };
+            const [activeTraveler, setActiveTraveler] = useState(travelers[0]);
+            const [trips, setTrips] = useState(defaultTripData);
+            const [expenses, setExpenses] = useState([]);
+            const [shoppingItems, setShoppingItems] = useState([]);
 
-            const getMockWeather = (dateStr) => {
-                const day = parseInt(dateStr.split('/')[1]);
-                if (day <= 17) return { icon: <Icon name="Sun" className="text-orange-400"/>, temp: '8°C' };
-                if (day === 18) return { icon: <Icon name="Cloud" className="text-gray-400"/>, temp: '6°C' };
-                return { icon: <Icon name="Snowflake" className="text-blue-200"/>, temp: '-2°C' };
-            };
+            const [selectedAccDate, setSelectedAccDate] = useState('1/15');
+            const [expRawAmount, setExpRawAmount] = useState('');
+            const [expDesc, setExpDesc] = useState('');
+            const [expType, setExpType] = useState('expense');
+            const [expCategory, setExpCategory] = useState('美食');
+            const [activeShopCategory, setActiveShopCategory] = useState('超市');
+            const [newShopItemName, setNewShopItemName] = useState('');
+
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'japan-2026-vFinal';
+            const firebaseConfig = (() => {
+                try { if (typeof __firebase_config !== 'undefined') return JSON.parse(__firebase_config); } catch (e) {}
+                return null;
+            })();
 
             // --- Firebase Sync ---
             useEffect(() => {
-                if (!firebaseConfig) { setLoading(false); return; }
-                const { initializeApp: initApp, getAuth: initAuth, getFirestore: initDb, onAuthStateChanged: onAuthChanged, signInAnonymously: signAnon, signInWithCustomToken: signToken } = window.FB;
-                
-                const fbApp = initApp(firebaseConfig);
-                const fbAuth = initAuth(fbApp);
-                const fbDb = initDb(fbApp);
+                if (!firebaseConfig || !window.FB) { setLoading(false); return; }
+                const { initializeApp, getAuth, getFirestore, onAuthStateChanged, signInAnonymously, signInWithCustomToken, onSnapshot, collection, getDocs, writeBatch, doc } = window.FB;
+                const fbApp = initializeApp(firebaseConfig);
+                const fbAuth = getAuth(fbApp);
+                const fbDb = getFirestore(fbApp);
 
-                const startAuth = async () => {
-                    const t = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-                    if (t) await signToken(fbAuth, t); else await signAnon(fbAuth);
+                const sign = async () => {
+                    const token = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+                    if (token) await signInWithCustomToken(fbAuth, token); else await signInAnonymously(fbAuth);
                 };
-                startAuth();
+                sign();
 
-                onAuthChanged(fbAuth, (u) => {
+                onAuthStateChanged(fbAuth, (u) => {
                     setUser(u);
                     if (u) {
-                        const tripsRef = window.FB.collection(fbDb, 'artifacts', appId, 'public', 'data', 'trips');
-                        const expRef = window.FB.collection(fbDb, 'artifacts', appId, 'public', 'data', 'expenses');
-                        const shopRef = window.FB.collection(fbDb, 'artifacts', appId, 'public', 'data', 'shopping');
+                        const tripsRef = collection(fbDb, 'artifacts', appId, 'public', 'data', 'trips');
+                        const expRef = collection(fbDb, 'artifacts', appId, 'public', 'data', 'expenses');
+                        const shopRef = collection(fbDb, 'artifacts', appId, 'public', 'data', 'shopping');
 
-                        window.FB.getDocs(tripsRef).then(snap => {
+                        getDocs(tripsRef).then(snap => {
                             if (snap.empty) {
-                                const batch = window.FB.writeBatch(fbDb);
-                                defaultTripData.forEach(item => batch.set(window.FB.doc(window.FB.collection(fbDb, 'artifacts', appId, 'public', 'data', 'trips')), { ...item, createdAt: new Date().toISOString() }));
+                                const batch = writeBatch(fbDb);
+                                defaultTripData.forEach(item => batch.set(doc(tripsRef), { ...item, createdAt: new Date().toISOString() }));
                                 batch.commit();
                             }
                         });
 
-                        window.FB.onSnapshot(tripsRef, s => setTrips(s.docs.map(d => ({ id: d.id, ...d.data() }))));
-                        window.FB.onSnapshot(expRef, s => setExpenses(s.docs.map(d => ({ id: d.id, ...d.data() }))));
-                        window.FB.onSnapshot(shopRef, s => {
-                            setShoppingItems(s.docs.map(d => ({ id: d.id, ...d.data() })));
-                            setLoading(false);
-                        });
+                        onSnapshot(tripsRef, s => { if(!s.empty) setTrips(s.docs.map(d => ({ id: d.id, ...d.data() }))); });
+                        onSnapshot(expRef, s => setExpenses(s.docs.map(d => ({ id: d.id, ...d.data() }))));
+                        onSnapshot(shopRef, s => { setShoppingItems(s.docs.map(d => ({ id: d.id, ...d.data() }))); setLoading(false); });
                     }
                 });
             }, []);
 
             const handleAddExpense = async (e) => {
                 e.preventDefault();
-                if (!user || !expDesc) return;
+                if (!user || !expDesc || !window.FB) return;
                 const sanitized = expRawAmount.replace(/[^-+*/().0-9]/g, '');
                 let amount = 0; try { amount = new Function(`return ${sanitized}`)() || 0; } catch (e) {}
-                await window.FB.addDoc(window.FB.collection(window.FB.getFirestore(), 'artifacts', appId, 'public', 'data', 'expenses'), {
+                const { getFirestore, collection, addDoc } = window.FB;
+                await addDoc(collection(getFirestore(), 'artifacts', appId, 'public', 'data', 'expenses'), {
                     amount, description: expDesc, type: expType, category: expCategory,
                     date: selectedAccDate, payer: activeTraveler.name, createdAt: new Date().toISOString()
                 });
@@ -250,7 +259,9 @@
             };
 
             const togglePurchased = async (item) => {
-                await window.FB.updateDoc(window.FB.doc(window.FB.getFirestore(), 'artifacts', appId, 'public', 'data', 'shopping', item.id), { purchased: !item.purchased });
+                if (!firebaseConfig || !window.FB) return;
+                const { getFirestore, doc, updateDoc } = window.FB;
+                await updateDoc(doc(getFirestore(), 'artifacts', appId, 'public', 'data', 'shopping', item.id), { purchased: !item.purchased });
             };
 
             const financeStats = (() => {
@@ -261,28 +272,26 @@
                 return { inc, exp, cumulative };
             })();
 
-            // --- 點擊返回處理邏輯 ---
             const closeOverlay = (e) => {
-                // 如果點擊的是實體的功能按鈕或輸入框，不關閉
-                if (e.target.closest('button') || e.target.closest('input') || e.target.closest('a')) return;
+                if (e.target.closest('button') || e.target.closest('a') || e.target.closest('input')) return;
                 setSelectedOverlay(null);
             };
 
             if (loading && firebaseConfig) return (
                 <div className="h-screen bg-[#F5F2E9] flex items-center justify-center font-sans">
-                    <div className="flex flex-col items-center gap-4">
-                        <Icon name="Loader2" size={32} className="animate-spin text-[#8B5E3C]" />
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-[#8B5E3C]">旅程資料讀取中...</p>
+                    <div className="flex flex-col items-center gap-4 text-[#8B5E3C]">
+                        <Icon name="Loader2" size={32} className="animate-spin" />
+                        <p className="text-[10px] font-bold uppercase tracking-widest">旅程載入中...</p>
                     </div>
                 </div>
             );
 
             return (
                 <div className="flex justify-center bg-[#DED9CE] min-h-screen font-sans overflow-x-hidden selection:bg-[#5D4037]/10">
-                    <div className="w-full max-w-[390px] min-h-screen bg-[#F5F2E9] shadow-2xl relative overflow-hidden flex flex-col grain-overlay">
+                    <div className="w-full max-w-[390px] min-h-screen bg-[#F5F2E9] shadow-2xl relative overflow-hidden flex flex-col grain-overlay text-[#4A3728]">
                         <div className="absolute inset-0 pointer-events-none opacity-[0.02] dot-grid z-0"></div>
 
-                        <div className="flex-1 overflow-y-auto no-scrollbar relative z-10 pb-36 text-[#4A3728]">
+                        <div className="flex-1 overflow-y-auto no-scrollbar relative z-10 content-padding">
                             <header className="pt-8 pb-4 px-6 shrink-0 relative border-b border-[#EAE3D2]/50">
                                 <div className="flex justify-between items-center text-[#4A3728]">
                                     <h1 className="text-2xl font-bold tracking-tighter leading-none">日本旅行手記</h1>
@@ -304,6 +313,7 @@
                             </header>
 
                             <main className="px-5 pt-2 animate-fade-in">
+                                {/* 行程 Tab */}
                                 {currentTab === 'itinerary' && (
                                     <div className="space-y-3 pt-2">
                                         {dates.map((d, i) => {
@@ -316,8 +326,8 @@
                                                     <div className="bg-white border rounded-xl shadow-sm overflow-hidden border-[#EAE3D2]">
                                                         <button onClick={() => setExpandedDateIndex(isExpanded ? null : i)} className="w-full p-3.5 flex items-center gap-4 active:bg-stone-50 transition-all text-left">
                                                             <div className={`w-11 h-11 bg-[#5D4037] flex flex-col items-center justify-center rounded-lg shadow-sm shrink-0`}>
-                                                                <span className="text-[7px] font-black text-white/50 uppercase leading-none mb-1 text-white">{d.weekday}</span>
-                                                                <span className="text-base font-bold text-white tracking-tighter text-white">{d.date.split('/')[1]}</span>
+                                                                <span className="text-[7px] font-black text-white/50 uppercase leading-none mb-1 text-white text-opacity-50">{d.weekday}</span>
+                                                                <span className="text-base font-bold text-white tracking-tighter">{d.date.split('/')[1]}</span>
                                                             </div>
                                                             <div className="flex-1 font-bold text-[13px]">{d.title}</div>
                                                             <div className="flex flex-col items-end gap-0.5 pr-1 border-l pl-3 border-[#F3EFE0]">
@@ -328,14 +338,14 @@
                                                         {isExpanded && (
                                                             <div className="px-5 pb-5 space-y-4 border-t pt-4">
                                                                 {i === 1 && (
-                                                                    <button onClick={() => setSelectedOverlay(usjMapData)} className="w-full bg-[#5D4037] text-white py-3 rounded-xl flex items-center justify-center gap-2 shadow-md active:scale-95 transition-all mb-4 text-white">
+                                                                    <button onClick={() => setSelectedOverlay({ title: '環球影城地圖', currentImg: 'https://lh3.googleusercontent.com/d/1PmA35rbRYDdi9hc0ClNl8p4RAioCT32x' })} className="w-full bg-[#5D4037] text-white py-3 rounded-xl flex items-center justify-center gap-2 shadow-md active:scale-95 transition-all mb-4 text-white">
                                                                         <Icon name="Map" size={14} /><span className="text-[10px] font-black uppercase tracking-widest text-white">查看環球影城地圖</span>
                                                                     </button>
                                                                 )}
                                                                 {sortedTrips.map(trip => (
                                                                     <div key={trip.id} className="flex gap-4 relative">
                                                                         <span className="text-[9px] font-black py-1 h-5 min-w-[38px] bg-[#FAF9F6] border border-[#EAE3D2] text-center rounded shadow-xs text-[#4A3728]">{trip.startTime}</span>
-                                                                        <div className="flex-1 text-[#4A3728]">
+                                                                        <div className="flex-1">
                                                                             <div className="flex items-center gap-2 mb-1">
                                                                                <Icon name={trip.category || "Star"} size={12} className="text-[#D6C5A0]" />
                                                                                <p className="text-[11px] font-bold">{trip.name}</p>
@@ -355,8 +365,9 @@
                                     </div>
                                 )}
 
+                                {/* 票券 Tab */}
                                 {currentTab === 'tickets' && (
-                                    <div className="space-y-4 pb-10 px-1 pt-2">
+                                    <div className="space-y-4 pb-10 px-1 pt-2 animate-fade-in">
                                         {ticketsData.map((tk, i) => {
                                             const my = tk.assignments ? tk.assignments[activeTraveler.id] : null;
                                             return (
@@ -365,18 +376,18 @@
                                                         {tk.type === 'Flight' ? (
                                                             <>
                                                                 <div className="bg-[#5D4037] p-3 text-white flex justify-between items-center text-[8px] font-bold uppercase tracking-widest text-white">
-                                                                    <div className="flex items-center gap-2"><Icon name="Plane" size={10}/> Boarding Pass</div>
-                                                                    <span>Cathay Pacific</span>
+                                                                    <div className="flex items-center gap-2 text-white"><Icon name="Plane" size={10}/> Boarding Pass</div>
+                                                                    <span className="text-white text-[10px]">Cathay Pacific</span>
                                                                 </div>
                                                                 <div className="p-5 text-[#4A3728]">
                                                                     <div className="flex justify-between items-end mb-4">
-                                                                        <div><p className="text-[7px] font-black opacity-30 uppercase tracking-widest text-[#A69076]">Flight</p><p className="text-sm font-black">CX 564</p></div>
-                                                                        <div className="text-right text-[9px] font-bold"><p className="text-[7px] font-black opacity-30">Times</p><span>11:15</span> ➔ <span>14:55</span></div>
+                                                                        <div><p className="text-[7px] font-black opacity-30 uppercase tracking-widest text-[#A69076]">Flight</p><p className="text-sm font-black text-[#4A3728]">CX 564</p></div>
+                                                                        <div className="text-right text-[9px] font-bold"><p className="text-[7px] font-black opacity-30 text-[#A69076]">Times</p><span>11:15</span> ➔ <span>14:55</span></div>
                                                                     </div>
-                                                                    <h3 className="text-[12px] font-bold border-b pb-3 mb-3">{tk.title}</h3>
+                                                                    <h3 className="text-[12px] font-bold border-b pb-3 mb-3 text-[#4A3728]">{tk.title}</h3>
                                                                     <div className="flex justify-between items-center bg-[#F5F2E9] p-3 rounded-xl border border-dashed border-[#D6C5A0]">
-                                                                        <div><p className="text-[7px] opacity-40 uppercase">Passenger</p><p className="text-[10px] font-bold text-[#8B5E3C]">{activeTraveler.name}</p></div>
-                                                                        <div className="text-center"><p className="text-[7px] opacity-40 text-center">Seat</p><p className="text-sm font-black text-[#5D4037]">{my?.seat}</p></div>
+                                                                        <div><p className="text-[7px] opacity-40 uppercase text-[#A69076]">Passenger</p><p className="text-[10px] font-bold text-[#8B5E3C]">{activeTraveler.name}</p></div>
+                                                                        <div className="text-center"><p className="text-[7px] opacity-40 text-center text-[#A69076]">Seat</p><p className="text-sm font-black text-[#5D4037]">{my?.seat || '待定'}</p></div>
                                                                         <div className="text-right">{tk.isVJW ? <Icon name="Zap" size={16} className="text-orange-400 animate-pulse" /> : <Icon name="QrCode" size={16} className="opacity-40" />}</div>
                                                                     </div>
                                                                 </div>
@@ -401,20 +412,31 @@
                                     </div>
                                 )}
 
+                                {/* 記帳 Tab (修正版) */}
                                 {currentTab === 'expenses' && (
-                                    <div className="space-y-4 pb-12 px-1 text-[#4A3728] pt-2 animate-fade-in">
+                                    <div className="space-y-4 pb-12 px-1 pt-2 animate-fade-in text-[#4A3728]">
+                                        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                                            {dates.map(d => (
+                                                <button key={d.date} onClick={() => setSelectedAccDate(d.date)} className={`shrink-0 flex flex-col items-center justify-center w-12 h-14 rounded-2xl border transition-all duration-300 ${selectedAccDate === d.date ? 'bg-[#5D4037] text-white shadow-lg scale-105 border-[#5D4037]' : 'bg-white text-[#8E7D6A] border-[#EAE3D2]'}`}>
+                                                    <span className="text-[6px] font-black uppercase opacity-60">{d.weekday}</span>
+                                                    <span className="text-sm font-bold tracking-tighter">{d.date.split('/')[1]}</span>
+                                                </button>
+                                            ))}
+                                        </div>
+
                                         <div className="bg-[#5D4037] p-6 rounded-[2.5rem] shadow-xl text-white text-center border border-white/5">
-                                            <p className="text-[7px] font-black uppercase tracking-[0.4em] opacity-40 mb-1 text-center text-white text-opacity-40">Cumulative Balance (¥)</p>
+                                            <p className="text-[7px] font-black uppercase tracking-[0.4em] opacity-40 mb-1 text-center text-white">Cumulative Balance (¥)</p>
                                             <h2 className="text-4xl font-bold tracking-tighter mb-6 text-white text-opacity-90">¥{financeStats.cumulative.toLocaleString()}</h2>
-                                            <div className="grid grid-cols-2 gap-4 border-t border-white/10 pt-4 px-2">
-                                                <div className="text-left text-[#F5F2E9]"><p className="text-[7px] opacity-40 uppercase mb-1 font-black">Today Inc.</p><p className="text-sm font-bold text-green-300">¥{financeStats.inc.toLocaleString()}</p></div>
-                                                <div className="text-right text-[#F5F2E9]"><p className="text-[7px] opacity-40 uppercase mb-1 font-black">Today Exp.</p><p className="text-sm font-bold text-red-300">¥{financeStats.exp.toLocaleString()}</p></div>
+                                            <div className="grid grid-cols-2 gap-4 border-t border-white/10 pt-4 px-2 text-[#F5F2E9]">
+                                                <div className="text-left"><p className="text-[7px] opacity-40 uppercase mb-1 font-black">Today Inc.</p><p className="text-sm font-bold text-green-300">¥{financeStats.inc.toLocaleString()}</p></div>
+                                                <div className="text-right text-stone-300 border-l border-white/10 pl-4"><p className="text-[7px] opacity-40 uppercase mb-1 font-black">Today Exp.</p><p className="text-sm font-bold text-red-300">¥{financeStats.exp.toLocaleString()}</p></div>
                                             </div>
                                         </div>
+
                                         <div className="bg-white border p-5 rounded-[2rem] shadow-sm text-[#4A3728] border-[#EAE3D2]">
-                                            <div className="flex gap-2 mb-4 bg-[#F3EFE0] p-1 rounded-xl text-[#4A3728]">
-                                                <button onClick={() => setExpType('expense')} className={`flex-1 py-1.5 text-[9px] font-black rounded-lg transition-all ${expType === 'expense' ? 'bg-[#5D4037] text-white shadow-md' : ''}`}>支出</button>
-                                                <button onClick={() => setExpType('income')} className={`flex-1 py-1.5 text-[9px] font-black rounded-lg transition-all ${expType === 'income' ? 'bg-[#D6C5A0] text-[#4A3728] shadow-md' : ''}`}>收入</button>
+                                            <div className="flex gap-2 mb-4 bg-[#F3EFE0] p-1 rounded-xl">
+                                                <button onClick={() => setExpType('expense')} className={`flex-1 py-1.5 text-[9px] font-black rounded-lg transition-all ${expType === 'expense' ? 'bg-[#5D4037] text-white shadow-md' : 'text-[#8E7D6A]'}`}>支出</button>
+                                                <button onClick={() => setExpType('income')} className={`flex-1 py-1.5 text-[9px] font-black rounded-lg transition-all ${expType === 'income' ? 'bg-[#D6C5A0] text-[#4A3728] shadow-md' : 'text-[#8E7D6A]'}`}>收入</button>
                                             </div>
                                             <div className="grid grid-cols-5 gap-2 mb-5">
                                                {['美食', '交通', '超商', '票券', '其他'].map(cat => (
@@ -425,60 +447,140 @@
                                             </div>
                                             <form onSubmit={handleAddExpense} className="space-y-4">
                                                 <input value={expRawAmount} onChange={e => setExpRawAmount(e.target.value)} placeholder="金額..." className="w-full bg-[#FAF9F6] border border-[#EAE3D2] rounded-xl text-[11px] px-4 py-3.5 outline-none focus:border-[#5D4037] font-mono shadow-inner text-[#4A3728]" />
-                                                <div className="flex gap-2">
+                                                <div className="flex gap-2 text-[#4A3728]">
                                                     <input value={expDesc} onChange={e => setExpDesc(e.target.value)} placeholder="備註..." className="flex-1 bg-[#FAF9F6] border border-[#EAE3D2] rounded-xl text-[11px] px-4 py-3.5 outline-none focus:border-[#5D4037] shadow-inner text-[#4A3728]" />
                                                     <button type="submit" className="bg-[#5D4037] text-white px-5 rounded-xl shadow-lg active:scale-95 transition-all text-white"><Icon name="Check" size={18} /></button>
                                                 </div>
                                             </form>
+                                        </div>
+
+                                        <div className="space-y-2 mt-4">
+                                            {expenses.filter(e => e.date === selectedAccDate).sort((a,b) => b.createdAt.localeCompare(a.createdAt)).map(exp => (
+                                                <div key={exp.id} className="flex items-center justify-between bg-white p-4 rounded-2xl shadow-xs border border-stone-100">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className={`w-9 h-9 rounded-full flex items-center justify-center ${exp.type === 'income' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
+                                                            <Icon name={exp.category === '美食' ? 'Utensils' : exp.category === '交通' ? 'Train' : exp.category === '超商' ? 'Store' : exp.category === '票券' ? 'Ticket' : 'MoreHorizontal'} size={14} />
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-[12px] font-bold text-[#4A3728]">{exp.description}</p>
+                                                            <p className="text-[8px] font-bold text-[#A69076] mt-0.5 uppercase tracking-tighter">{exp.payer} • {exp.category}</p>
+                                                        </div>
+                                                    </div>
+                                                    <span className={`text-[13px] font-black ${exp.type === 'income' ? 'text-green-600' : 'text-[#5D4037]'}`}>¥{exp.amount.toLocaleString()}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {currentTab === 'stay' && (
+                                    <div className="space-y-4 pb-10 px-1 pt-2 animate-fade-in text-[#4A3728]">
+                                        {staysData.map((h, i) => (
+                                            <div key={i} className="bg-white border border-[#EAE3D2] p-5 rounded-2xl shadow-sm">
+                                                <h4 className="font-black text-[13px] flex items-center gap-2 mb-1 uppercase tracking-tight text-[#5D4037]"><Icon name="Hotel" size={14} className="text-[#8B5E3C] text-opacity-80"/> {h.name}</h4>
+                                                <p className="text-[9px] text-[#A68B6A] mb-4 font-bold tracking-widest">{h.period}</p>
+                                                <div className="grid grid-cols-2 gap-3 mb-4">
+                                                    <div className="bg-[#FAF9F6] p-2 rounded-lg border border-[#EAE3D2]">
+                                                        <p className="text-[7px] font-black opacity-40 uppercase tracking-widest mb-1 text-[#A69076]">Check-In</p>
+                                                        <p className="text-xs font-black text-[#5D4037] text-center">{h.checkIn}</p>
+                                                    </div>
+                                                    <div className="bg-[#FAF9F6] p-2 rounded-lg border border-[#EAE3D2]">
+                                                        <p className="text-[7px] font-black opacity-40 uppercase tracking-widest mb-1 text-[#A69076]">Check-Out</p>
+                                                        <p className="text-xs font-black text-[#5D4037] text-center">{h.checkOut}</p>
+                                                    </div>
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <div className="flex items-center gap-2 text-[10px] font-bold opacity-70"><Icon name="Navigation" size={10} className="text-[#8B5E3C]"/> {h.distance}</div>
+                                                    <p className="bg-[#F5F2E9]/50 p-2 rounded border-l-2 border-[#D6C5A0] opacity-70 italic text-[9px] leading-relaxed font-medium">⚠️ {h.note}</p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {currentTab === 'shopping' && (
+                                    <div className="animate-fade-in pt-2 text-[#4A3728]">
+                                        <div className="bg-white border border-[#EAE3D2] shadow-sm rounded-3xl min-h-[480px] flex flex-col overflow-hidden text-[#4A3728]">
+                                            <div className="grid grid-cols-5 gap-0.5 p-1 bg-[#F3EFE0] border-b">
+                                                {['超市', '超商', '唐吉', '美妝', '優惠券'].map(cat => (
+                                                    <button key={cat} onClick={() => setActiveShopCategory(cat)} className={`py-1.5 text-[9px] font-black rounded transition-all ${activeShopCategory === cat ? 'bg-[#5D4037] text-white shadow-md' : 'text-[#8B5E3C]'}`}>{cat}</button>
+                                                ))}
+                                            </div>
+                                            <div className="p-6 flex-1 flex flex-col">
+                                                {activeShopCategory === '優惠券' ? (
+                                                    <div className="grid grid-cols-2 gap-3 pb-10">
+                                                        {couponData.map(cp => (
+                                                            <button key={cp.id} onClick={() => setSelectedOverlay(cp)} className="bg-[#FAF9F6] border border-[#EAE3D2] rounded-xl overflow-hidden shadow-sm active:scale-95 text-left transition-all">
+                                                                <div className="h-20 bg-stone-200 relative overflow-hidden"><img src={cp.img} className="w-full h-full object-cover opacity-80" alt="" /><Icon name="Image" size={14} className="absolute top-2 right-2 opacity-30 text-white" /></div>
+                                                                <div className="p-2 leading-tight font-black text-[10px] text-[#4A3728]"><p className="mb-0.5">{cp.name}</p><p className="text-red-500 font-bold text-[8px]">{cp.discount}</p></div>
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex-1 flex flex-col">
+                                                        <h2 className="text-xs font-bold mb-6 flex items-center gap-2 tracking-widest uppercase font-black text-[#4A3728]"><Icon name="ShoppingBag" size={14}/> {activeTraveler.name} 的清單</h2>
+                                                        <div className="flex-1 space-y-2 overflow-y-auto max-h-[300px] no-scrollbar px-1">
+                                                            {shoppingItems.filter(item => item.travelerId === activeTraveler.id && item.category === activeShopCategory).sort((a,b) => a.purchased - b.purchased).map(item => (
+                                                                <div key={item.id} className="flex items-center justify-between p-2 border-b border-[#EEEAE0]/40 group transition-all text-[#4A3728]">
+                                                                    <button onClick={() => togglePurchased(item)} className="flex-1 flex items-center gap-3 text-left">
+                                                                        <div className={`w-4 h-4 border border-[#D6C5A0] rounded-sm flex items-center justify-center transition-all ${item.purchased ? 'bg-[#5D4037] border-[#5D4037]' : 'bg-white'}`}>{item.purchased && <Icon name="Check" size={12} className="text-white" />}</div>
+                                                                        <span className={`text-[12px] font-medium transition-all ${item.purchased ? 'line-through opacity-30 italic text-[#8E7D6A]' : 'text-[#4A3728]'}`}>{item.name}</span>
+                                                                    </button>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 )}
                             </main>
                         </div>
 
-                        {/* --- 底部導覽列 --- */}
-                        <nav className="shrink-0 bg-white border-t border-[#EAE3D2] flex z-40 shadow-[0_-5px_20px_rgba(0,0,0,0.03)] px-1 h-14 items-center bg-[#FFFFFF]/95 backdrop-blur-sm text-[#4A3728]">
-                            <button onClick={() => setCurrentTab('itinerary')} className={`flex-1 flex flex-col items-center gap-0.5 ${currentTab === 'itinerary' ? 'text-[#5D4037]' : 'text-[#8E7D6A] opacity-40'}`}><Icon name="Layout" size={18} /><span className="text-[8px] font-black uppercase">行程</span></button>
-                            <button onClick={() => setCurrentTab('tickets')} className={`flex-1 flex flex-col items-center gap-0.5 ${currentTab === 'tickets' ? 'text-[#5D4037]' : 'text-[#8E7D6A] opacity-40'}`}><Icon name="Ticket" size={18} /><span className="text-[8px] font-black uppercase">票券</span></button>
-                            <button onClick={() => setCurrentTab('expenses')} className={`flex-1 flex flex-col items-center gap-0.5 ${currentTab === 'expenses' ? 'text-[#5D4037]' : 'text-[#8E7D6A] opacity-40'}`}><Icon name="Wallet" size={18} /><span className="text-[8px] font-black uppercase">記帳</span></button>
-                            <button onClick={() => setCurrentTab('stay')} className={`flex-1 flex flex-col items-center gap-0.5 ${currentTab === 'stay' ? 'text-[#5D4037]' : 'text-[#8E7D6A] opacity-40'}`}><Icon name="Hotel" size={18} /><span className="text-[8px] font-black uppercase">住宿</span></button>
-                            <button onClick={() => setCurrentTab('shopping')} className={`flex-1 flex flex-col items-center gap-0.5 ${currentTab === 'shopping' ? 'text-[#5D4037]' : 'text-[#8E7D6A] opacity-40'}`}><Icon name="ShoppingBag" size={18} /><span className="text-[8px] font-black uppercase">購物</span></button>
+                        {/* --- 底部導覽列 (已修復固定位置) --- */}
+                        <nav className="fixed-nav bg-white border-t border-[#EAE3D2] flex shadow-[0_-5px_20px_rgba(0,0,0,0.03)] px-1 h-16 items-center bg-white/95 backdrop-blur-sm">
+                            <button onClick={() => setCurrentTab('itinerary')} className={`flex-1 flex flex-col items-center gap-0.5 transition-all ${currentTab === 'itinerary' ? 'text-[#5D4037] scale-110 font-black' : 'text-[#8E7D6A] opacity-40'}`}><Icon name="Layout" size={18} /><span className="text-[8px] uppercase">行程</span></button>
+                            <button onClick={() => setCurrentTab('tickets')} className={`flex-1 flex flex-col items-center gap-0.5 transition-all ${currentTab === 'tickets' ? 'text-[#5D4037] scale-110 font-black' : 'text-[#8E7D6A] opacity-40'}`}><Icon name="Ticket" size={18} /><span className="text-[8px] uppercase">票券</span></button>
+                            <button onClick={() => setCurrentTab('expenses')} className={`flex-1 flex flex-col items-center gap-0.5 transition-all ${currentTab === 'expenses' ? 'text-[#5D4037] scale-110 font-black' : 'text-[#8E7D6A] opacity-40'}`}><Icon name="Wallet" size={18} /><span className="text-[8px] uppercase">記帳</span></button>
+                            <button onClick={() => setCurrentTab('stay')} className={`flex-1 flex flex-col items-center gap-0.5 transition-all ${currentTab === 'stay' ? 'text-[#5D4037] scale-110 font-black' : 'text-[#8E7D6A] opacity-40'}`}><Icon name="Hotel" size={18} /><span className="text-[8px] uppercase">住宿</span></button>
+                            <button onClick={() => setCurrentTab('shopping')} className={`flex-1 flex flex-col items-center gap-0.5 transition-all ${currentTab === 'shopping' ? 'text-[#5D4037] scale-110 font-black' : 'text-[#8E7D6A] opacity-40'}`}><Icon name="ShoppingBag" size={18} /><span className="text-[8px] uppercase">購物</span></button>
                         </nav>
                         
-                        {/* Overlay 彈窗 (點擊圖片/卡片即可關閉) */}
+                        {/* Overlay 彈窗 (修正點擊關閉) */}
                         {selectedOverlay && (
                             <div className="fixed inset-0 z-[100] overlay-backdrop flex flex-col items-center justify-center p-6 animate-fade-in cursor-pointer" onClick={closeOverlay}>
                                 <div className="w-full max-w-[340px] pointer-events-auto cursor-pointer" onClick={closeOverlay}>
-                                    <div className="bg-[#FAF9F6] p-6 rounded-[2.5rem] shadow-2xl relative overflow-hidden text-[#5D4037] border border-[#EAE3D2]">
+                                    <div className="bg-[#FAF9F6] p-6 rounded-[2.5rem] shadow-2xl relative overflow-hidden border border-[#EAE3D2] cursor-pointer">
                                         <div className="absolute inset-0 pointer-events-none opacity-[0.03] dot-grid"></div>
                                         <div className="flex justify-between items-center mb-5 border-b border-[#EAE3D2] pb-4 px-1 relative z-20">
-                                            <div className="text-left flex-1"><h3 className="font-black text-lg leading-tight">{selectedOverlay.name || selectedOverlay.title}</h3><p className="text-[7px] font-bold text-[#A69076] mt-0.5 uppercase tracking-widest">{selectedOverlay.isVJW ? 'Portal' : activeTraveler.name + ' 專屬'}</p></div>
+                                            <div className="text-left flex-1"><h3 className="font-black text-lg leading-tight text-[#4A3728] text-opacity-90">{selectedOverlay.name || selectedOverlay.title}</h3><p className="text-[7px] font-bold text-[#A69076] mt-0.5 uppercase tracking-widest">{selectedOverlay.isVJW ? 'Portal' : activeTraveler.name + ' 專屬'}</p></div>
                                             <button onClick={() => setSelectedOverlay(null)} className="text-[#8B5E3C] p-2 hover:bg-stone-100 rounded-full transition-colors relative z-30"><Icon name="X" size={24} /></button>
                                         </div>
                                         <div className="bg-white rounded-[2rem] overflow-hidden border border-dashed border-[#D6C5A0] flex flex-col items-center justify-center min-h-[350px] p-2 shadow-inner text-[#4A3728] relative z-20">
                                             {selectedOverlay.isVJW ? (
-                                                <div className="p-6 w-full flex flex-col items-center text-center">
+                                                <div className="p-6 w-full flex flex-col items-center text-center text-[#4A3728]">
                                                     <div className="bg-orange-50 p-5 rounded-full mb-6 text-orange-400"><Icon name="Zap" size={48} /></div>
-                                                    <h4 className="text-sm font-black mb-2 uppercase tracking-widest text-[#4A3728]">Visit Japan Web</h4>
+                                                    <h4 className="text-sm font-black mb-2 uppercase tracking-widest">Visit Japan Web</h4>
                                                     <div className="p-3 bg-[#F9F8F6] rounded-xl border border-[#EAE3D2] w-full mb-6">
-                                                        <p className="text-[7px] font-black text-[#A69076] uppercase tracking-widest mb-1 text-center text-[#A69076]">乘客預訂編號</p>
-                                                        <p className="text-lg font-black text-[#5D4037] tracking-widest text-center text-[#5D4037]">{selectedOverlay.assignments[activeTraveler.id].code}</p>
+                                                        <p className="text-[7px] font-black text-[#A69076] uppercase tracking-widest mb-1 text-center">乘客預訂編號</p>
+                                                        <p className="text-lg font-black text-[#5D4037] tracking-widest text-center">{selectedOverlay.assignments[activeTraveler.id].code}</p>
                                                     </div>
                                                     <button onClick={(e) => { e.stopPropagation(); window.open(selectedOverlay.vjwLink); }} className="w-full bg-[#5D4037] text-white py-4 rounded-2xl font-black text-[11px] shadow-xl hover:bg-[#4A3728] transition-all active:scale-95 text-white">立即填寫</button>
                                                 </div>
                                             ) : selectedOverlay.isJR ? (
                                                 <div className="p-4 w-full text-left text-[#4A3728]">
                                                     <p className="text-[7px] font-black text-[#8E7D6A] uppercase mb-1.5 tracking-widest opacity-60">Reservation Details</p>
-                                                    <p className="text-lg font-black text-[#5D4037] mb-2 text-[#5D4037]">{selectedOverlay.details.no}</p>
-                                                    <p className="text-[10px] font-bold opacity-60 text-[#4A3728]">{selectedOverlay.details.notice}</p>
+                                                    <p className="text-lg font-black text-[#5D4037] mb-2">{selectedOverlay.details.no}</p>
+                                                    <p className="text-[10px] font-bold opacity-60">{selectedOverlay.details.notice}</p>
                                                 </div>
                                             ) : selectedOverlay.currentImg || selectedOverlay.img ? (
                                                 <img src={selectedOverlay.currentImg || selectedOverlay.img} className="w-full h-auto object-contain rounded-2xl shadow-sm" alt="Ticket" />
                                             ) : (
-                                                <div className="text-center opacity-10"><Icon name="QrCode" size={100} /><p className="text-[10px] mt-2 font-black uppercase tracking-widest text-[#4A3728]">VOID</p></div>
+                                                <div className="text-center opacity-10 text-[#4A3728]"><Icon name="QrCode" size={100} /><p className="text-[10px] mt-2 font-black uppercase tracking-widest">VOID</p></div>
                                             )}
                                         </div>
-                                        <p className="text-[7px] text-center mt-6 opacity-40 font-bold tracking-[0.2em] italic text-[#5D4037] relative z-20">點擊任意處即可返回列表</p>
+                                        <p className="text-[7px] text-center mt-6 opacity-40 font-bold tracking-[0.2em] italic text-[#5D4037] relative z-20">點擊圖片或背景即可返回</p>
                                     </div>
                                 </div>
                             </div>
