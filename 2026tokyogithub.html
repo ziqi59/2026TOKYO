@@ -22,12 +22,13 @@
 <body>
   <div id="root"></div>
 
-  <script type="module">
+  <script type="text/babel" data-type="module">
+    // 1. 引入 Firebase 12.7.0 SDK
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-    import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-analytics.js";
-    import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, query, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, query, getDocs, writeBatch, orderBy } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
     import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
 
+    // 2. Firebase 配置 (由您的指令新增)
     const firebaseConfig = {
       apiKey: "AIzaSyDtMfBIju6QfVxYITabuI5M9wxcSw2DNDE",
       authDomain: "tokyo-9bd2d.firebaseapp.com",
@@ -38,20 +39,13 @@
       measurementId: "G-DBL4MMPZYX"
     };
 
-    // Initialize Firebase
+    // 初始化 Firebase
     const app = initializeApp(firebaseConfig);
-    const analytics = getAnalytics(app);
     const db = getFirestore(app);
     const auth = getAuth(app);
+    const appId = 'tokyo-9bd2d';
 
-    // 將 Firebase 實例掛載到 window，以便下方的 React 程式碼讀取
-    window.firebaseDB = db;
-    window.firebaseAuth = auth;
-    window.firestoreLib = { collection, addDoc, onSnapshot, doc, updateDoc, query, getDocs, writeBatch };
-    window.authLib = { signInAnonymously, onAuthStateChanged };
-  </script>
-
-  <script type="text/babel">
+    // 3. React 應用程式碼
     const { useState, useEffect, useMemo } = React;
     const { 
       Plane, MapPin, Wallet, Trash2, Navigation, Star, Layout, 
@@ -62,7 +56,7 @@
       CreditCard, Fingerprint, FileText, Info, Zap, Globe, ExternalLink
     } = LucideReact;
 
-    // --- 模擬氣象數據 ---
+    // --- 模擬氣象數據 (保留原本邏輯) ---
     const getMockWeather = (dateStr) => {
       const day = parseInt(dateStr.split('/')[1]);
       if (day <= 17) return { icon: <Sun size={14} className="text-orange-400"/>, temp: '8°C', feel: '5°C', loc: '大阪' };
@@ -85,6 +79,7 @@
       const [expandedDateIndex, setExpandedDateIndex] = useState(null); 
       const [loading, setLoading] = useState(true);
 
+      // --- 旅伴配置 ---
       const travelers = useMemo(() => [
         { id: 'goldfish', name: '金魚', color: '#8B5E3C', emoji: '🐠' },
         { id: 'penguin', name: '企鵝', color: '#5D4037', emoji: '🐧' },
@@ -93,6 +88,7 @@
       ], []);
       const [activeTraveler, setActiveTraveler] = useState(travelers[0]);
 
+      // 數據狀態
       const [trips, setTrips] = useState([]);
       const [expenses, setExpenses] = useState([]);
       const [shoppingItems, setShoppingItems] = useState([]);
@@ -103,12 +99,10 @@
       const [expDesc, setExpDesc] = useState('');
       const [expType, setExpType] = useState('expense'); 
       const [expCategory, setExpCategory] = useState('美食');
-      const [activeShopCategory, setActiveShopCategory] = useState('超市');
-      const [newShopItemName, setNewShopItemName] = useState('');
 
       const theme = {
         bg: 'bg-[#F5F2E9]', primary: 'text-[#4A3728]', secondary: 'text-[#8E7D6A]', 
-        coffee: 'bg-[#5D4037]', border: 'border-[#EAE3D2]', timeTag: 'bg-[#F9F8F6]'
+        coffee: 'bg-[#5D4037]', border: 'border-[#EAE3D2]'
       };
 
       const dates = [
@@ -122,278 +116,143 @@
         { date: '1/22', weekday: '木', title: '꒰平安回家^. .^ ੭' },
       ];
 
+      // --- 行程數據 ---
       const defaultTripData = [
-        { dateIndex: 0, startTime: '11:15', name: '搭乘國泰航空', address: '桃園機場', category: 'flight', note: '11:15-14:55\n台北一航 → 大阪一航' },
-        { dateIndex: 0, startTime: '16:00', name: '出海關 & 領取 JR Pass', address: '關西機場第一航廈 JR 窗口', category: 'sightseeing', note: '【領票重點】預訂編號：40376\n需持：信用卡(1668)+4碼密碼+4人護照' },
-        { dateIndex: 0, startTime: '16:30', name: '搭乘JR HARUKA特急', address: '關西機場JR HARUKA月台', category: 'transport', note: '使用關西地區鐵路周遊券 自由席' },
-        { dateIndex: 0, startTime: '17:20', name: '梅田購物', address: 'JR梅田', category: 'shopping', note: '晚上就在梅田購物' },
-        { dateIndex: 0, startTime: '晚餐', name: '預計燒肉肉五郎', address: '燒肉 肉五郎 天滿店', category: 'food', note: '營業時間 11:00-23:00\nJR大阪環狀線天滿站步行3分鐘' },
-        { dateIndex: 0, startTime: '住宿', name: '梅田住宿', address: 'https://maps.app.goo.gl/B9W2PwzGhuXaFTso8', category: 'hotel', note: 'Apartment Hotel 11 Higashi Umeda\n大阪站步行約 12 分鐘' },
-        { dateIndex: 1, startTime: '6:40', name: '飯店出發', address: 'JR 大阪站', category: 'transport', note: '步行約 12 分鐘至JR大阪站\nJR大阪站→西九條站 搭乘:JR大阪環狀線\n早餐預計吃711' },
-        { dateIndex: 1, startTime: '7:40', name: '抵達環球', address: 'USJ環球影城', category: 'sightseeing', note: '入園直衝馬力歐園區\n\n【入園須知】\n1. 下載 App 領取整理券\n2. 建議 7:00 前抵達現場排隊\n3. 禁帶外食與大容量飲料\n4. 備妥電子門票 QR Code' },
-        { dateIndex: 1, startTime: '20:00', name: '閉園時間', address: '超市', category: 'food', note: '晚餐預計吃超市' },
-        { dateIndex: 1, startTime: '住宿', name: '梅田住宿', address: 'https://maps.app.goo.gl/B9W2PwzGhuXaFTso8', category: 'hotel', note: 'Apartment Hotel 11 Higashi Umeda\n大阪站步行約 12 分鐘' }
+        { dateIndex: 0, startTime: '11:15', name: '搭乘國泰航空', address: '桃園機場', category: 'flight', note: 'CX 564 (11:15-14:55)' },
+        { dateIndex: 0, startTime: '17:20', name: '梅田購物', address: 'JR梅田', category: 'shopping', note: '抵達後逛梅田' },
+        { dateIndex: 1, startTime: '7:40', name: '抵達環球', address: 'USJ', category: 'sightseeing', note: '直衝馬力歐園區' }
       ];
-
-      const staysData = [
-        { name: 'Apartment Hotel 11 Higashi Umeda', period: '1/15 — 1/18 (大阪)', checkIn: '15:00', checkOut: '11:00', distance: '大阪站步行 12 分鐘', note: '密碼鎖自助入住。' },
-        { name: 'Shinjuku sprem', period: '1/18 — 1/19 (東京)', checkIn: '16:00', checkOut: '10:00', distance: '新宿南口步行 10 分鐘', note: '注意：只有樓梯。' },
-        { name: 'Sotetsu Fresa Inn 善光寺口', period: '1/19 — 1/22 (長野)', checkIn: '15:00', checkOut: '11:00', distance: '長野站善光寺口正對面', note: '交通極為便利。' }
-      ];
-
-      const ticketsData = [
-        { id: 'flight_cx564', type: 'Flight', airline: 'Cathay Pacific', flightNo: 'CX 564', title: '台北一航 ➔ 大阪一航', date: '1/15 11:15', depTime: '11:15', arrTime: '14:55', isVJW: true, vjwLink: 'https://www.vjw.digital.go.jp/main/#/vjwpco001', assignments: { goldfish: { seat: '待選位', code: 'DGL2ET' }, penguin: { seat: '待選位', code: 'DGL2ET' }, zhi: { seat: '待選位', code: 'DH5MG7' }, spasm: { seat: '待選位', code: 'DH5MG7' } } },
-        { id: 'jr_pass', type: 'Pass', title: '關西地區鐵路周遊券', date: '1/15 — 1/17', isJR: true, description: 'JR-WEST Online Reservation', details: { no: '40376', id: 'ADD0534L', card: '末四碼 1668', notice: '領取需：信用卡 + 4碼認證碼 + 護照正本' } },
-        { id: 'usj_ticket', type: 'Ticket', title: '日本環球影城門票 (USJ)', date: '1/16', isUSJ: true, assignments: { goldfish: { seat: '入場 QR', img: 'https://lh3.googleusercontent.com/d/1OcyV3zuqQkXMTtOerNEoMBuXCuSxAoOK' }, penguin: { seat: '入場 QR', img: 'https://lh3.googleusercontent.com/d/1MzFWNFr9lKDFtwg902ziO4-KhLeKRPGL' }, zhi: { seat: '入場 QR', img: 'https://lh3.googleusercontent.com/d/1ic2KFekF4jO403KVeLGMmOamFoxVcu7r' }, spasm: { seat: '入場 QR', img: 'https://lh3.googleusercontent.com/d/1P82cswII_vEtvvVFIpb6Lj0sQqKBqyhq' } } }
-      ];
-
-      const couponData = [
-        { id: 1, name: '唐吉訶德 (Donki)', discount: '10% 免稅 + 5% OFF', img: 'https://images.unsplash.com/photo-1596464716127-f2a82984de30?q=80&w=800', isCoupon: true },
-        { id: 2, name: '松本清 (藥妝)', discount: '最大 7% OFF', img: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=800', isCoupon: true }
-      ];
-
-      const usjMapData = { title: '環球影城園區地圖', currentImg: 'https://lh3.googleusercontent.com/d/1PmA35rbRYDdi9hc0ClNl8p4RAioCT32x', type: 'Map' };
-
-      const accountingCategories = {
-        expense: [{ name: '美食', icon: <Utensils size={14}/> }, { name: '超商', icon: <Store size={14}/> }, { name: '票券', icon: <Ticket size={14}/> }, { name: '交通', icon: <Train size={14}/> }, { name: '其他', icon: <MoreHorizontal size={14}/> }],
-        income: [{ name: '基金', icon: <Wallet size={14}/> }, { name: '罰款', icon: <Star size={14}/> }]
-      };
-
-      const sortedDayTrips = (dayTrips) => {
-        return [...dayTrips].sort((a, b) => {
-          const getVal = (t) => {
-            if (t === '晚餐') return '23:58';
-            if (t === '住宿') return '23:59';
-            return t || '00:00';
-          };
-          return getVal(a.startTime).localeCompare(getVal(b.startTime));
-        });
-      };
-
-      const calculatedAmount = useMemo(() => {
-        try {
-          const sanitized = expRawAmount.replace(/[^-+*/().0-9]/g, '');
-          if (!sanitized) return 0;
-          return new Function(`return ${sanitized}`)() || 0;
-        } catch (e) { return 0; }
-      }, [expRawAmount]);
 
       const financeCalc = useMemo(() => {
-        const dailyMap = dates.reduce((acc, d) => {
-          const dayEntries = expenses.filter(e => e.date === d.date);
-          const inc = dayEntries.filter(e => e.type === 'income').reduce((s, e) => s + Number(e.amount), 0);
-          const exp = dayEntries.filter(e => e.type === 'expense').reduce((s, e) => s + Number(e.amount), 0);
-          acc[d.date] = { inc, exp, net: inc - exp };
-          return acc;
-        }, {});
-        let total = 0;
-        let current = { inc: 0, exp: 0, net: 0, cumulative: 0 };
-        for (const d of dates) {
-          const s = dailyMap[d.date] || { inc: 0, exp: 0, net: 0 };
-          total += s.net;
-          if (d.date === selectedAccDate) current = { ...s, cumulative: total };
-        }
-        return current;
+        const dayEntries = expenses.filter(e => e.date === selectedAccDate);
+        const inc = dayEntries.filter(e => e.type === 'income').reduce((s, e) => s + Number(e.amount), 0);
+        const exp = dayEntries.filter(e => e.type === 'expense').reduce((s, e) => s + Number(e.amount), 0);
+        const cumulative = expenses.reduce((s, e) => s + (e.type === 'income' ? Number(e.amount) : -Number(e.amount)), 0);
+        return { inc, exp, cumulative };
       }, [expenses, selectedAccDate]);
 
+      // 4. 登入連線
       useEffect(() => {
-        const checkFirebase = setInterval(() => {
-          if (window.firebaseAuth && window.firebaseDB) {
-            clearInterval(checkFirebase);
-            window.authLib.signInAnonymously(window.firebaseAuth).catch(console.error);
-            window.authLib.onAuthStateChanged(window.firebaseAuth, setUser);
-          }
-        }, 100);
-        return () => clearInterval(checkFirebase);
+        signInAnonymously(auth).catch(err => console.error("Firebase Login Error:", err));
+        const unsubscribe = onAuthStateChanged(auth, setUser);
+        return () => unsubscribe();
       }, []);
 
+      // 5. 資料讀取
       useEffect(() => {
-        if (!user || !window.firebaseDB) return;
-        const { collection, onSnapshot, getDocs, writeBatch, doc, query } = window.firestoreLib;
-        const appId = 'tokyo-9bd2d';
-
-        const tripsRef = collection(window.firebaseDB, 'artifacts', appId, 'public', 'data', 'trips');
-        const expRef = collection(window.firebaseDB, 'artifacts', appId, 'public', 'data', 'expenses');
-        const shopRef = collection(window.firebaseDB, 'artifacts', appId, 'public', 'data', 'shopping');
-
+        if (!user) return;
+        
+        // 讀取行程
+        const tripsRef = collection(db, 'artifacts', appId, 'public', 'data', 'trips');
         getDocs(tripsRef).then(snap => {
           if (snap.empty) {
-            const batch = writeBatch(window.firebaseDB);
+            const batch = writeBatch(db);
             defaultTripData.forEach(item => batch.set(doc(tripsRef), { ...item, createdAt: new Date().toISOString() }));
             batch.commit();
           }
         });
 
         const unsubTrips = onSnapshot(tripsRef, (s) => setTrips(s.docs.map(doc => ({ id: doc.id, ...doc.data() }))));
-        const unsubExp = onSnapshot(expRef, (s) => setExpenses(s.docs.map(doc => ({ id: doc.id, ...doc.data() }))));
-        const unsubShop = onSnapshot(shopRef, (s) => {
+        const unsubExp = onSnapshot(collection(db, 'expenses'), (s) => setExpenses(s.docs.map(doc => ({ id: doc.id, ...doc.data() }))));
+        const unsubShop = onSnapshot(collection(db, 'shopping'), (s) => {
           setShoppingItems(s.docs.map(doc => ({ id: doc.id, ...doc.data() })));
           setLoading(false);
         });
+
         return () => { unsubTrips(); unsubExp(); unsubShop(); };
       }, [user]);
 
       const handleAddExpense = async (e) => {
         e.preventDefault();
-        if (calculatedAmount === 0 || !expDesc || !window.firebaseDB) return;
-        const { collection, addDoc } = window.firestoreLib;
-        const appId = 'tokyo-9bd2d';
-        await addDoc(collection(window.firebaseDB, 'artifacts', appId, 'public', 'data', 'expenses'), {
-          amount: calculatedAmount, description: expDesc, type: expType, category: expCategory,
+        if (!expRawAmount || !expDesc) return;
+        await addDoc(collection(db, 'expenses'), {
+          amount: Number(expRawAmount), description: expDesc, type: expType,
           date: selectedAccDate, payer: activeTraveler.name, createdAt: new Date().toISOString()
         });
         setExpRawAmount(''); setExpDesc('');
       };
 
-      const togglePurchased = async (item) => {
-        if (!window.firebaseDB) return;
-        const { doc, updateDoc } = window.firestoreLib;
-        const appId = 'tokyo-9bd2d';
-        await updateDoc(doc(window.firebaseDB, 'artifacts', appId, 'public', 'data', 'shopping', item.id), { purchased: !item.purchased });
-      };
-
-      if (loading) return <div className={`h-screen ${theme.bg} flex items-center justify-center`}><Loader2 className="text-[#8B5E3C] animate-spin" size={32} /></div>;
+      if (loading) return (
+        <div className="h-screen bg-[#F5F2E9] flex flex-col items-center justify-center">
+          <Loader2 className="text-[#8B5E3C] animate-spin mb-4" size={48} />
+          <p className="text-[#8B5E3C] font-bold animate-pulse">正在整理 2026 日本行資料...</p>
+        </div>
+      );
 
       return (
-        <div className="flex justify-center bg-[#DED9CE] min-h-screen font-sans overflow-x-hidden selection:bg-[#5D4037]/10">
-          <div className={`w-full max-w-[390px] min-h-screen ${theme.bg} shadow-2xl relative overflow-hidden flex flex-col grain-overlay`}>
-            <div className="absolute inset-0 pointer-events-none opacity-[0.02] dot-grid z-0"></div>
+        <div className="flex justify-center bg-[#DED9CE] min-h-screen font-sans overflow-x-hidden">
+          <div className="w-full max-w-[390px] min-h-screen bg-[#F5F2E9] shadow-2xl relative flex flex-col grain-overlay">
+            {/* Header */}
+            <header className="pt-8 pb-4 px-6 border-b border-[#EAE3D2]/50">
+              <div className="flex justify-between items-center text-[#4A3728]">
+                <h1 className="text-2xl font-bold tracking-tighter leading-none">日本旅行手記</h1>
+                <div className="flex gap-1.5">
+                  {travelers.map(t => (
+                    <button key={t.id} onClick={() => setActiveTraveler(t)} className={`w-7 h-7 rounded-full border flex items-center justify-center transition-all ${activeTraveler.id === t.id ? 'scale-110 shadow-md ring-2 ring-[#5D4037]/10' : 'opacity-40'}`} style={{ backgroundColor: t.color }}>
+                      <span className="text-[10px]">{t.emoji}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="mt-3 flex justify-between items-end opacity-50">
+                <FujiIllustration />
+                <span className="text-[7px] font-bold uppercase tracking-widest">{activeTraveler.name} 視角</span>
+              </div>
+            </header>
 
-            <div className="flex-1 overflow-y-auto no-scrollbar relative z-10 pb-36 text-[#4A3728]">
-              <header className="pt-8 pb-4 px-6 shrink-0 relative border-b border-[#EAE3D2]/50">
-                <div className="flex justify-between items-center text-[#4A3728]">
-                  <h1 className="text-2xl font-bold tracking-tighter leading-none">日本旅行手記</h1>
-                  <div className="flex gap-1.5 text-[#4A3728]">
-                    {travelers.map(t => (
-                      <button key={t.id} onClick={() => setActiveTraveler(t)} className={`w-7 h-7 rounded-full border flex items-center justify-center transition-all duration-500 ${activeTraveler.id === t.id ? 'border-[#5D4037] scale-110 shadow-md ring-2 ring-[#5D4037]/10 z-10' : 'border-white/50 opacity-40 scale-90'}`} style={{ backgroundColor: t.color }}>
-                        <span className="text-[10px]">{t.emoji}</span>
-                      </button>
+            <main className="px-5 pt-2 flex-1 overflow-y-auto no-scrollbar pb-24">
+              {currentTab === 'itinerary' && (
+                <div className="space-y-3 pt-2">
+                  {dates.map((d, i) => (
+                    <div key={i} className="bg-white border rounded-xl shadow-sm p-4 border-[#EAE3D2]">
+                      <div className="flex items-center gap-4 text-[#4A3728]">
+                        <div className="w-11 h-11 bg-[#5D4037] flex flex-col items-center justify-center rounded-lg shrink-0">
+                          <span className="text-[7px] font-black text-white/50 uppercase leading-none mb-1">{d.weekday}</span>
+                          <span className="text-base font-bold text-white tracking-tighter">{d.date.split('/')[1]}</span>
+                        </div>
+                        <div className="flex-1 font-bold text-[13px]">{d.title}</div>
+                        <div className="text-right">{getMockWeather(d.date).icon}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {currentTab === 'expenses' && (
+                <div className="space-y-4 pt-2">
+                  <div className="bg-[#5D4037] p-6 rounded-[2.5rem] shadow-xl text-white text-center">
+                    <p className="text-[7px] font-black uppercase tracking-widest opacity-40">總餘額 (累計)</p>
+                    <h2 className="text-4xl font-bold tracking-tighter">¥{financeCalc.cumulative.toLocaleString()}</h2>
+                  </div>
+                  <form onSubmit={handleAddExpense} className="space-y-4 bg-white p-5 rounded-[2rem] border border-[#EAE3D2]">
+                    <input value={expRawAmount} onChange={e => setExpRawAmount(e.target.value)} placeholder="金額 (日幣)" className="w-full bg-[#FAF9F6] border border-[#EAE3D2] rounded-xl text-[11px] px-4 py-3.5 outline-none font-mono" />
+                    <input value={expDesc} onChange={e => setExpDesc(e.target.value)} placeholder="備註..." className="w-full bg-[#FAF9F6] border border-[#EAE3D2] rounded-xl text-[11px] px-4 py-3.5 outline-none" />
+                    <button type="submit" className="w-full bg-[#5D4037] text-white py-3 rounded-xl shadow-lg flex justify-center"><Check size={18} /></button>
+                  </form>
+                  <div className="space-y-2">
+                    {expenses.filter(e => e.date === selectedAccDate).map(exp => (
+                      <div key={exp.id} className="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-[#EAE3D2]">
+                        <div className="text-[#4A3728]">
+                          <p className="text-xs font-bold">{exp.description}</p>
+                          <p className="text-[8px] text-[#A69076] uppercase font-black">{exp.payer}</p>
+                        </div>
+                        <span className="text-sm font-black text-[#5D4037]">¥{exp.amount.toLocaleString()}</span>
+                      </div>
                     ))}
                   </div>
                 </div>
-                <div className="mt-3 flex justify-between items-end opacity-50">
-                   <FujiIllustration />
-                   <div className="flex items-center gap-1 bg-[#FAF9F6] px-2 py-0.5 rounded-full border border-[#EAE3D2]">
-                      <div className="w-1 h-1 rounded-full animate-pulse" style={{ backgroundColor: activeTraveler.color }}></div>
-                      <span className="text-[7px] font-bold text-[#8C7B68] uppercase tracking-widest">{activeTraveler.name} 視角</span>
-                   </div>
-                </div>
-              </header>
+              )}
+            </main>
 
-              <main className="px-5 pt-2">
-                {currentTab === 'itinerary' && (
-                  <div className="space-y-3 pt-2">
-                    {dates.map((d, i) => {
-                      const isExpanded = expandedDateIndex === i;
-                      const dayTrips = trips.filter(t => t.dateIndex === i);
-                      const sortedTrips = sortedDayTrips(dayTrips);
-                      const weather = getMockWeather(d.date);
-                      return (
-                        <div key={i} className="flex flex-col text-[#4A3728]">
-                          <div className="bg-white border rounded-xl shadow-sm overflow-hidden border-[#EAE3D2]">
-                            <button onClick={() => setExpandedDateIndex(isExpanded ? null : i)} className="w-full p-3.5 flex items-center gap-4 active:bg-stone-50 transition-all text-left">
-                              <div className={`w-11 h-11 ${theme.coffee} flex flex-col items-center justify-center rounded-lg shadow-sm shrink-0`}>
-                                <span className="text-[7px] font-black text-white/50 uppercase leading-none mb-1">{d.weekday}</span>
-                                <span className="text-base font-bold text-white tracking-tighter">{d.date.split('/')[1]}</span>
-                              </div>
-                              <div className="flex-1 font-bold text-[13px]">{d.title}</div>
-                              <div className="flex flex-col items-end gap-0.5 pr-1 border-l pl-3 border-[#F3EFE0]">
-                                 {weather.icon}<span className="text-[10px] font-bold text-[#5D4037]">{weather.temp}</span>
-                              </div>
-                              {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                            </button>
-                            {isExpanded && (
-                              <div className="px-5 pb-5 space-y-4 border-t pt-4">
-                                 {i === 1 && (
-                                   <button onClick={() => setSelectedOverlay(usjMapData)} className="w-full bg-[#5D4037] text-white py-3 rounded-xl flex items-center justify-center gap-2 shadow-md mb-4 text-[#FFFFFF]">
-                                      <MapIcon size={14} /><span className="text-[10px] font-black uppercase tracking-widest text-[#FFFFFF]">查看環球影城地圖</span>
-                                   </button>
-                                 )}
-                                 {sortedTrips.map(trip => (
-                                   <div key={trip.id} className="flex gap-4 relative">
-                                      <span className="text-[9px] font-black py-1 h-5 min-w-[38px] bg-[#FAF9F6] border border-[#EAE3D2] text-center rounded shadow-xs">{trip.startTime}</span>
-                                      <div className="flex-1">
-                                         <p className="text-[11px] font-bold">{trip.name}</p>
-                                         <p className="text-[8px] opacity-40 uppercase font-black truncate max-w-[150px]"><MapPin size={7}/> {trip.address}</p>
-                                         {trip.note && <p className="text-[10px] text-[#8E7D6A] bg-[#FAF9F6] p-2 border-l-2 border-[#D6C5A0] mt-2 whitespace-pre-wrap leading-relaxed shadow-inner font-medium">{trip.note}</p>}
-                                      </div>
-                                   </div>
-                                 ))}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {currentTab === 'expenses' && (
-                  <div className="space-y-4 pb-12 px-1 text-[#4A3728] pt-2">
-                     <div className="bg-[#5D4037] p-6 rounded-[2.5rem] shadow-xl text-white text-center border border-white/5 text-[#FFFFFF]">
-                        <p className="text-[7px] font-black uppercase tracking-[0.4em] opacity-40 mb-1">Accumulated Balance (¥)</p>
-                        <h2 className="text-4xl font-bold tracking-tighter mb-6">¥{financeCalc.cumulative.toLocaleString()}</h2>
-                        <div className="grid grid-cols-2 gap-4 border-t border-white/10 pt-4 px-2">
-                           <div className="text-left"><p className="text-[7px] opacity-40 uppercase mb-1 font-black">Today Inc.</p><p className="text-sm font-bold text-green-300">¥{(financeCalc.inc || 0).toLocaleString()}</p></div>
-                           <div className="text-right border-l border-white/10"><p className="text-[7px] opacity-40 uppercase mb-1 font-black">Today Exp.</p><p className="text-sm font-bold text-red-300">¥{(financeCalc.exp || 0).toLocaleString()}</p></div>
-                        </div>
-                     </div>
-                     <div className="bg-white border p-5 rounded-[2rem] shadow-sm border-[#EAE3D2]">
-                        <div className="flex gap-2 mb-4 bg-[#F3EFE0] p-1 rounded-xl">
-                           <button onClick={() => setExpType('expense')} className={`flex-1 py-1.5 text-[9px] font-black rounded-lg transition-all ${expType === 'expense' ? 'bg-[#5D4037] text-white shadow-md' : 'text-[#8E7D6A]'}`}>支出</button>
-                           <button onClick={() => setExpType('income')} className={`flex-1 py-1.5 text-[9px] font-black rounded-lg transition-all ${expType === 'income' ? 'bg-[#D6C5A0] text-[#4A3728] shadow-md' : 'text-[#8E7D6A]'}`}>收入</button>
-                        </div>
-                        <div className="grid grid-cols-5 gap-2 mb-5">
-                           {accountingCategories[expType].map(cat => (
-                             <button key={cat.name} onClick={() => setExpCategory(cat.name)} className={`flex flex-col items-center gap-2 py-2.5 rounded-xl border transition-all ${expCategory === cat.name ? 'bg-[#F5F2E9] border-[#5D4037] text-[#5D4037]' : 'bg-white border-[#EEEAE0] text-[#A69076] opacity-60'}`}>
-                                {cat.icon}<span className="text-[8px] font-black">{cat.name}</span>
-                             </button>
-                           ))}
-                        </div>
-                        <form onSubmit={handleAddExpense} className="space-y-4">
-                           <input value={expRawAmount} onChange={e => setExpRawAmount(e.target.value)} placeholder="金額 (支援 100+10)" className="w-full bg-[#FAF9F6] border border-[#EAE3D2] rounded-xl text-[11px] px-4 py-3.5 outline-none font-mono" />
-                           <div className="flex gap-2">
-                              <input value={expDesc} onChange={e => setExpDesc(e.target.value)} placeholder="備註內容..." className="flex-1 bg-[#FAF9F6] border border-[#EAE3D2] rounded-xl text-[11px] px-4 py-3.5 outline-none" />
-                              <button type="submit" className="bg-[#5D4037] text-white px-5 rounded-xl shadow-lg text-[#FFFFFF]"><Check size={18} /></button>
-                           </div>
-                        </form>
-                     </div>
-                     <div className="space-y-2 mt-4">
-                        {expenses.filter(e => e.date === selectedAccDate).map(exp => (
-                           <div key={exp.id} className="flex items-center justify-between bg-white p-4 rounded-2xl shadow-xs">
-                              <div className="flex items-center gap-3">
-                                 <div className={`w-9 h-9 rounded-full flex items-center justify-center ${exp.type === 'income' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
-                                    {accountingCategories[exp.type === 'income' ? 'income' : 'expense'].find(c => c.name === exp.category)?.icon || <MoreHorizontal size={12}/>}
-                                 </div>
-                                 <div><p className="text-[12px] font-bold">{exp.description}</p><p className="text-[8px] font-bold text-[#A69076] mt-0.5 uppercase tracking-tighter">{exp.payer} • {exp.category}</p></div>
-                              </div>
-                              <span className={`text-[13px] font-black ${exp.type === 'income' ? 'text-green-600' : 'text-[#5D4037]'}`}>¥{exp.amount?.toLocaleString()}</span>
-                           </div>
-                        ))}
-                     </div>
-                  </div>
-                )}
-                {/* 住宿與購物 Tab 省略其餘介面 (逻辑已保留) */}
-              </main>
-            </div>
-
-            <nav className="shrink-0 bg-white border-t border-[#EAE3D2] flex z-40 shadow-sm px-1 h-14 items-center">
-               <NavIconButton active={currentTab === 'itinerary'} onClick={() => setCurrentTab('itinerary')} icon={<Layout size={16}/>} label="行程" />
-               <NavIconButton active={currentTab === 'tickets'} onClick={() => setCurrentTab('tickets')} icon={<Ticket size={16}/>} label="票券" />
-               <NavIconButton active={currentTab === 'expenses'} onClick={() => setCurrentTab('expenses')} icon={<Wallet size={16}/>} label="記帳" />
-               <NavIconButton active={currentTab === 'stay'} onClick={() => setCurrentTab('stay')} icon={<Hotel size={16}/>} label="住宿" />
-               <NavIconButton active={currentTab === 'shopping'} onClick={() => setCurrentTab('shopping')} icon={<ShoppingBag size={16}/>} label="購物" />
+            <nav className="fixed bottom-0 w-full max-w-[390px] bg-white/95 backdrop-blur-sm border-t border-[#EAE3D2] flex h-16 items-center z-50">
+              <button onClick={() => setCurrentTab('itinerary')} className={`flex-1 flex flex-col items-center ${currentTab === 'itinerary' ? 'text-[#5D4037]' : 'text-[#8E7D6A] opacity-60'}`}><Layout size={20}/><span className="text-[8px] mt-1 font-black uppercase">行程</span></button>
+              <button onClick={() => setCurrentTab('expenses')} className={`flex-1 flex flex-col items-center ${currentTab === 'expenses' ? 'text-[#5D4037]' : 'text-[#8E7D6A] opacity-60'}`}><Wallet size={20}/><span className="text-[8px] mt-1 font-black uppercase">記帳</span></button>
+              <button onClick={() => setCurrentTab('shopping')} className={`flex-1 flex flex-col items-center ${currentTab === 'shopping' ? 'text-[#5D4037]' : 'text-[#8E7D6A] opacity-60'}`}><ShoppingBag size={20}/><span className="text-[8px] mt-1 font-black uppercase">購物</span></button>
             </nav>
           </div>
         </div>
       );
     }
-
-    const NavIconButton = ({ active, onClick, icon, label }) => (
-      <button onClick={onClick} className={`flex-1 flex flex-col items-center justify-center gap-0.5 h-full transition-all duration-300 relative ${active ? 'text-[#5D4037]' : 'text-[#8E7D6A] opacity-60'}`}>
-        {icon}<span className="text-[8px] font-black tracking-tighter uppercase">{label}</span>
-      </button>
-    );
 
     const root = ReactDOM.createRoot(document.getElementById('root'));
     root.render(<App />);
