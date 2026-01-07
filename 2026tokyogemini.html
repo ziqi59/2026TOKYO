@@ -44,15 +44,20 @@
             background: #FFFFFF; display: flex; height: 46px; 
             border-top: 1px solid #EAE3D2; box-shadow: 0 -5px 25px rgba(0,0,0,0.05);
         }
+
+        /* 使滑動區域在桌機呈現抓取手勢 */
+        .cursor-grab { cursor: grab; }
+        .cursor-grabbing { cursor: grabbing; }
     </style>
 </head>
 <body class="bg-[#DED9CE]">
     <div id="root"></div>
 
+    <!-- [主程式邏輯區] -->
     <script type="text/babel">
         const { useState, useEffect, useMemo, useRef } = React;
 
-        // --- 1. 全域組件與輔助工具 ---
+        // --- 1. 組件宣告 (確保在 App 之前宣告以避免 ReferenceError) ---
 
         const FujiIllustration = () => (
             <svg viewBox="0 0 200 100" className="w-14 h-auto opacity-20 text-[#8B5E3C]">
@@ -73,7 +78,8 @@
                         "Transport": "Train", "Sightseeing": "Star", "Food": "Utensils", 
                         "Shopping": "ShoppingBag", "Layout": "Layout", "Ticket": "Ticket", 
                         "Wallet": "Wallet", "Hotel": "Hotel", "ShoppingBag": "ShoppingBag",
-                        "Tag": "Tag", "Check": "Check", "X": "X", "Link": "ExternalLink", "Navigation": "Navigation", "Zap": "Zap"
+                        "Tag": "Tag", "Check": "Check", "X": "X", "Link": "ExternalLink", 
+                        "Navigation": "Navigation", "Zap": "Zap", "MoreHorizontal": "MoreHorizontal"
                     };
                     const targetName = iconMap[name] || name;
                     const kebabName = targetName.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
@@ -95,7 +101,7 @@
                     const code = data.current_weather.weathercode;
                     let icon = '☼'; 
                     if ([1, 2, 3, 45, 48].includes(code)) icon = '༄'; 
-                    if ([51, 53, 55, 61, 63, 65, 80, 81, 82, 95].includes(code)) icon = '⛈︎'; 
+                    if ([51, 53, 55, 61, 63, 65, 80, 81, 82, 95, 96, 99].includes(code)) icon = '⛈︎'; 
                     if ([71, 73, 75, 77, 85, 86].includes(code)) icon = '❅'; 
                     setWeather({ temp: `${temp}°C`, icon });
                 } catch (e) { console.error("Weather Load Error"); }
@@ -116,7 +122,7 @@
             </button>
         );
 
-        // --- 2. 全域資料定義 (行程、票券、住宿、購物) ---
+        // --- 2. 全域資料定義 (行程、票券、住宿、記帳、購物) ---
 
         const travelers = [
             { id: 'goldfish', name: '金魚', color: '#8B5E3C', emoji: '🐠' },
@@ -133,22 +139,22 @@
             { date: '1/19', weekday: '月', title: 'DAY 5 ꒰ 富士山の日✿˖°', loc: { lat: 35.503, lon: 138.767, name: '山梨縣' } },
             { date: '1/20', weekday: '火', title: 'DAY 6 ꒰ 栂池滑雪Day-1', loc: { lat: 36.648, lon: 138.194, name: '長野市' } },
             { date: '1/21', weekday: '水', title: 'DAY 7 ꒰ 栂池滑雪Day-2', loc: { lat: 36.698, lon: 137.861, name: '白馬地區' } },
-            { date: '1/22', weekday: '木', title: 'DAY 8 ꒰ 桃園平安回家 ꒱', loc: { lat: 24.993, lon: 121.301, name: '桃園' } },
+            { date: '1/22', weekday: '木', title: 'DAY 8 ꒰ 桃園平安回家 ꒱', loc: { lat: 25.013, lon: 121.215, name: '桃園' } },
         ];
 
         const staysData = [
-            { name: 'Apartment Hotel 11 Higashi Umeda', period: '1/15 — 1/18', checkIn: '15:00', checkOut: '11:00', distance: '大阪站步行 12 分鐘', luggage: '可寄放 (需聯絡)', nearby: 'Life 超市、唐吉', note: '自助密碼入住' },
-            { name: 'Shinjuku sprem', period: '1/18 — 1/19', checkIn: '16:00', checkOut: '10:00', distance: '新宿站南口步行 10 分鐘', luggage: '12:00 後才可寄放', nearby: 'FamilyMart', note: '位於 3 樓 (無電梯)' },
-            { name: 'Sotetsu Fresa Inn 善光寺口', period: '1/19 — 1/22', checkIn: '15:00', checkOut: '11:00', distance: '長野站正對面', luggage: '全天寄放', nearby: 'MIDORI、7-11', note: '交通極便利' }
+            { name: 'Apartment Hotel 11 Higashi Umeda', period: '1/15 — 1/18', checkIn: '15:00', checkOut: '11:00', distance: 'JR 大阪站步行 12 分鐘', luggage: '可寄放 (需聯絡)', nearby: 'Life 超市、唐吉', note: '自助密碼鎖入住' },
+            { name: 'Shinjuku sprem', period: '1/18 — 1/19', checkIn: '16:00', checkOut: '10:00', distance: 'JR 新宿站南口步行 10 分鐘', luggage: '12:00 後才可寄放', nearby: 'FamilyMart', note: '位於 3 樓 (無電梯)' },
+            { name: 'Sotetsu Fresa Inn 善光寺口', period: '1/19 — 1/22', checkIn: '15:00', checkOut: '11:00', distance: 'JR 長野站正對面步行 2 分鐘', luggage: '全天寄放', nearby: 'MIDORI、7-11', note: '交通極便利' }
         ];
 
+        // 修正後的票券連結
         const ticketsData = [
             { id: 'tk1', type: 'Flight', title: '國泰航空 CX564 (台北→大阪)', date: '1/15 11:15', assignments: { goldfish: { code: 'DGL2ET', seat: '待選' }, penguin: { code: 'DGL2ET', seat: '待選' }, zhi: { code: 'DH5MG7', seat: '待選' }, spasm: { code: 'DH5MG7', seat: '待選' } }, isVJW: true, vjwLink: 'https://www.vjw.digital.go.jp/' },
             { id: 'tk2', type: 'Pass', title: '關西地區鐵路周遊券', date: '1/15', isJR: true, details: { no: '40376', card: '1668', notice: '持護照於JR窗口領取' } },
             { id: 'tk3', type: 'Ticket', title: 'USJ 日本環球影城門票', date: '1/16', assignments: { goldfish: { img: 'https://lh3.googleusercontent.com/d/1OcyV3zuqQkXMTtOerNEoMBuXCuSxAoOK' }, penguin: { img: 'https://lh3.googleusercontent.com/d/1MzFWNFr9lKDFtwg902ziO4-KhLeKRPGL' }, zhi: { img: 'https://lh3.googleusercontent.com/d/1ic2KFekF4jO403KVeLGMmOamFoxVcu7r' }, spasm: { img: 'https://lh3.googleusercontent.com/d/1P82cswIIyvEtvvVFIpb6Lj0sQqKBqyhq' } } },
             { id: 'tk4', type: 'Train', title: '新幹線 Nozomi (新大阪→品川)', date: '1/18 08:30', assignments: { zhi: { seat: '13-1-B' }, spasm: { seat: '13-1-C' }, penguin: { seat: '13-1-D' }, goldfish: { seat: '13-1-E' } } },
             { id: 'tk7', type: 'Train', title: '新幹線 Kagayaki 519 (長野)', date: '1/19 21:04', assignments: { zhi: { seat: '6-17-D' }, spasm: { seat: '6-17-E' }, penguin: { seat: '6-18-D' }, goldfish: { seat: '6-18-E' } } },
-            { id: 'tk8', type: 'Train', title: '新幹線 Kagayaki 504 (上野)', date: '1/22 09:17', assignments: { zhi: { seat: '8-18-D' }, spasm: { seat: '8-18-E' }, penguin: { seat: '8-19-D' }, goldfish: { seat: '8-19-E' } } },
             { id: 'tk9', type: 'Ticket', title: 'Skyliner (機場快線)', date: '1/22 11:05', currentImg: 'https://lh3.googleusercontent.com/d/1TqPXatdp3FU501uBio-4ahi6SJIRKEua' },
             { id: 'tk10', type: 'Flight', title: '國泰航空 CX451 (回程)', date: '1/22 15:30', assignments: { goldfish: { code: 'CX451', seat: '待選' }, penguin: { code: 'CX451', seat: '待選' }, zhi: { code: 'CX451', seat: '待選' }, spasm: { code: 'CX451', seat: '待選' } }, isVJW: true, vjwLink: 'https://www.vjw.digital.go.jp/' }
         ];
@@ -225,13 +231,21 @@
             { id: 'donki_vFinal', name: '唐吉訶德 Donki', discount: '10% 免稅 + 5% 折扣', img: 'https://lh3.googleusercontent.com/d/1GLEnLyxPei2-k0ST3i6JX9xwnPxfvHVH', externalLink: 'https://japanportal.donki-global.com/coupon/cp001_zhtw.html', type: 'Coupon' }
         ];
 
+        // 修正後的藥妝與美妝資料連結 (lh3.googleusercontent.com 直連)
         const drugstoreMasterData = [
+            // 藥妝
             { id: 'p1_vitc', name: '武田製藥 維他命C錠 (300錠)', category: '藥妝', img: 'https://lh3.googleusercontent.com/d/1XzQ0ob4I9EvhvrmRWXz1YEbHhJqVkRBs', intro: '補充C與鈣質，緩解疲勞淡化斑點', price: '¥3,000', store: '松本清、Sun Drug、Aeon', purchased: false, type: 'Product' },
             { id: 'p2_repair', name: '第一三共 Oivalux PZ 修復乳膏 (10g)', category: '藥妝', img: 'https://lh3.googleusercontent.com/d/1oUmOZHN_mmsOGcSyWsCntw-RjDboDuL9', intro: '快速止癢抗炎，修復濕疹與皮膚炎症狀', price: '¥2,000', store: '松本清、Cocokara Fine、Sun Drug', purchased: false, type: 'Product' },
-            { id: 'p3_patch', name: '小林退熱貼', category: '藥妝', img: 'https://lh3.googleusercontent.com/d/1gzHSDr1XnQV7Zl3KTDR_NGthysTnqaQI', intro: '瞬間降溫散熱，緩解發燒不適', price: '¥500', store: 'Sun Drug、松本清、各大藥妝店', purchased: false, type: 'Product' }
+            { id: 'p3_patch', name: '小林退熱貼', category: '藥妝', img: 'https://lh3.googleusercontent.com/d/1gzHSDr1XnQV7Zl3KTDR_NGthysTnqaQI', intro: '瞬間降溫散熱，緩解發燒不適', price: '¥500', store: 'Sun Drug、松本清、各大藥妝店', purchased: false, type: 'Product' },
+            // 美妝
+            { id: 'bz1', name: 'TAKAMI 角質道小藍瓶 30ml', category: '美妝', img: 'https://lh3.googleusercontent.com/d/1iQaypfEWu7Epb15xOiL7KfuvEAYMuhdg', intro: '溫和代謝角質，肌膚透亮滑嫩', price: '¥5,500', store: 'Loft、@cosme TOKYO、伊勢丹', purchased: false, type: 'Product' },
+            { id: 'bz2', name: 'TOKIO IE INKARAMI PLATINUM (京喚羽銀系列)', category: '美妝', img: 'https://lh3.googleusercontent.com/d/1xgrQ2oGVrmyL4ILz5-LjVPJvQt3t1xA-', intro: '獨家技術修護受損，打造輕盈水潤髮', price: '¥5,160', store: '唐吉訶德、Loft、Tokyu Hands', purchased: false, type: 'Product', note: '銀色(Platinum):適合大多數髮質。金色(Premium):保濕力更強。' },
+            { id: 'bz3', name: 'KISSME 花漾美姬 睫毛精華液 EX', category: '美妝', img: 'https://lh3.googleusercontent.com/d/1nXqvRFGlYX4tKawzQMOgmI_v6EqmhEkT', intro: '27種精華液成分，強韌滋養睫毛', price: '¥1,300', store: '松本清、Loft、Plaza', purchased: false, type: 'Product' },
+            { id: 'bz4', name: 'Melano CC 毛孔清透酵素潔面乳', category: '美妝', img: 'https://lh3.googleusercontent.com/d/10BcW1FLuMXCxprOaNuCXBEURHAa39OrA', intro: '酵素深入清潔毛孔，洗後清爽亮白', price: '¥700', store: '唐吉訶德、松本清、各大藥妝店', purchased: false, type: 'Product' },
+            { id: 'bz5', name: 'd program 敏感話題潔膚乳N', category: '美妝', img: 'https://lh3.googleusercontent.com/d/1E4D8_GvX5_DJ88Q9fwKAk5CTE4-EKxLy', intro: '專為敏感肌設計，洗後溫和不乾澀', price: '¥2,800', store: '松本清、松屋、各大藥妝店', purchased: false, type: 'Product' }
         ];
 
-        const accIconsMap = { '美食': '🥞', '交通': '🚃', '超商': '🍙', '票券': '🎟️', '其他': '🎀', '基金': '🏦', '罰款': '⚖️' };
+        const accIcons = { '美食': '🥞', '交通': '🚃', '超商': '🍙', '票券': '🎟️', '其他': '🎀', '基金': '🏦', '罰款': '⚖️' };
 
         // --- 3. App 主組件 ---
 
@@ -242,9 +256,9 @@
             const [selectedOverlay, setSelectedOverlay] = useState(null);
             const [showCouponsView, setShowCouponsView] = useState(false);
             
-            // 持久化 Key
-            const STORAGE_EXP = 'japan_trip_vFinal_expenses_fixed_final';
-            const STORAGE_SHOP = 'japan_trip_vFinal_shopping_fixed_final';
+            // 資料持久化 Key
+            const STORAGE_EXP = 'japan_trip_vFinal_expenses_fixed_vFinal';
+            const STORAGE_SHOP = 'japan_trip_vFinal_shopping_fixed_vFinal';
 
             const [expenses, setExpenses] = useState(() => JSON.parse(localStorage.getItem(STORAGE_EXP) || '[]'));
             const [shoppingItems, setShoppingItems] = useState(() => {
@@ -263,6 +277,27 @@
             const [activeShopCategory, setActiveShopCategory] = useState('藥妝');
             const [newShopItemName, setNewShopItemName] = useState('');
 
+            const scrollRef = useRef(null);
+            const [isDragging, setIsDragging] = useState(false);
+            const [startX, setStartX] = useState(0);
+            const [scrollLeft, setScrollLeft] = useState(0);
+
+            const handleMouseDown = (e) => {
+                if (!scrollRef.current) return;
+                setIsDragging(true);
+                setStartX(e.pageX - scrollRef.current.offsetLeft);
+                setScrollLeft(scrollRef.current.scrollLeft);
+            };
+            const handleMouseLeave = () => { setIsDragging(false); };
+            const handleMouseUp = () => { setIsDragging(false); };
+            const handleMouseMove = (e) => {
+                if (!isDragging || !scrollRef.current) return;
+                e.preventDefault();
+                const x = e.pageX - scrollRef.current.offsetLeft;
+                const walk = (x - startX) * 2;
+                scrollRef.current.scrollLeft = scrollLeft - walk;
+            };
+
             const handleAddExpense = (e) => {
                 e.preventDefault();
                 if (!expDesc.trim()) return;
@@ -280,7 +315,7 @@
             const handleAddShopItem = (e) => {
                 e.preventDefault();
                 if (!newShopItemName.trim()) return;
-                const newItem = { id: Date.now(), name: newShopItemName, category: activeShopCategory, travelerId: activeTraveler.id, purchased: false, type: 'Product', intro: '使用者新增商品', price: '待定', store: '藥妝店', createdAt: new Date().toISOString() };
+                const newItem = { id: Date.now(), name: newShopItemName, category: activeShopCategory, travelerId: activeTraveler.id, purchased: false, type: 'Product', intro: '手動新增', price: '待定', store: '待定', createdAt: new Date().toISOString() };
                 setShoppingItems([...shoppingItems, newItem]);
                 setNewShopItemName('');
             };
@@ -315,9 +350,9 @@
                         <div className="absolute inset-0 pointer-events-none opacity-[0.02] dot-grid z-0"></div>
 
                         <div className="flex-1 overflow-y-auto no-scrollbar relative z-10 content-padding">
-                            <header className="pt-8 pb-4 px-6 shrink-0 border-b border-[#EAE3D2]/50 text-[#4A3728]">
-                                <div className="flex justify-between items-center">
-                                    <h1 className="text-2xl font-bold tracking-tighter leading-none text-[#4A3728]">日本旅行手記</h1>
+                            <header className="pt-8 pb-4 px-6 shrink-0 border-b border-[#EAE3D2]/50">
+                                <div className="flex justify-between items-center text-[#4A3728]">
+                                    <h1 className="text-2xl font-bold tracking-tighter leading-none">日本旅行手記</h1>
                                     <div className="flex gap-1.5">
                                         {travelers.map(t => (
                                             <button key={t.id} onClick={() => setActiveTraveler(t)} className={`w-7 h-7 rounded-full border flex items-center justify-center transition-all duration-500 ${activeTraveler.id === t.id ? 'border-[#5D4037] scale-110 shadow-md ring-2 ring-[#5D4037]/10 z-10' : 'border-white/50 opacity-40 scale-90'}`} style={{ backgroundColor: t.color }}>
@@ -336,7 +371,7 @@
                             </header>
 
                             <main className="px-5 pt-2 animate-fade-in text-[#4A3728]">
-                                {/* 1. 行程分頁 */}
+                                {/* 1. 行程 */}
                                 {currentTab === 'itinerary' && (
                                     <div className="space-y-3 pt-2">
                                         {dates.map((d, i) => {
@@ -345,7 +380,7 @@
                                                 <div key={i} className="bg-white border rounded-xl shadow-sm overflow-hidden border-[#EAE3D2]">
                                                     <button onClick={() => setExpandedDateIndex(isExpanded ? null : i)} className="w-full p-3.5 flex items-center gap-4 text-left active:bg-stone-50 transition-all text-[#4A3728]">
                                                         <div className={`w-11 h-11 bg-[#5D4037] flex flex-col items-center justify-center rounded-lg shadow-sm shrink-0`}>
-                                                            <span className="text-[7px] font-black text-white/50 uppercase leading-none mb-1 text-white text-opacity-50">{d.weekday}</span>
+                                                            <span className="text-[7px] font-black text-white/50 uppercase leading-none mb-1 text-white">{d.weekday}</span>
                                                             <span className="text-base font-bold text-white tracking-tighter text-white">{d.date.split('/')[1]}</span>
                                                         </div>
                                                         <div className="flex-1 font-bold text-[13px]">{d.title}</div>
@@ -353,7 +388,7 @@
                                                         <Icon name={isExpanded ? "ChevronUp" : "ChevronDown"} size={14} className="opacity-30" />
                                                     </button>
                                                     {isExpanded && (
-                                                        <div className="px-5 pb-5 space-y-4 border-t pt-4 animate-fade-in text-[#4A3728]">
+                                                        <div className="px-5 pb-5 space-y-4 border-t pt-4 animate-fade-in">
                                                             {sortedDayTrips(fullItineraryData.filter(t => t.dateIndex === i)).map((trip, idx) => (
                                                                 <div key={idx} className="flex gap-4">
                                                                     <span className="text-[9px] font-black py-1 h-5 min-w-[38px] bg-[#FAF9F6] border border-[#EAE3D2] text-center rounded shadow-xs text-[#4A3728]">{trip.startTime}</span>
@@ -372,25 +407,25 @@
                                     </div>
                                 )}
 
-                                {/* 2. 票券分頁 */}
+                                {/* 2. 票券 */}
                                 {currentTab === 'tickets' && (
                                     <div className="space-y-4 pb-10 px-1 pt-2 animate-fade-in text-[#4A3728]">
                                         {ticketsData.map((tk, i) => {
                                             const my = tk.assignments ? tk.assignments[activeTraveler.id] : null;
                                             const isFlight = tk.type === 'Flight';
                                             return (
-                                                <button key={i} onClick={() => setSelectedOverlay({ ...tk, currentImg: my?.img || tk.currentImg })} className="w-full text-left active:scale-[0.98] transition-all">
+                                                <button key={i} onClick={() => setSelectedOverlay({ ...tk, currentUserData: my })} className="w-full text-left active:scale-[0.98] transition-all">
                                                     <div className={`bg-white border shadow-xl rounded-2xl overflow-hidden relative ${isFlight ? 'pt-0 border-[#5D4037]/20' : 'p-5 border-[#EAE3D2]'}`}>
                                                         {isFlight ? (
                                                             <>
                                                                 <div className="bg-[#5D4037] p-3 text-white flex justify-between items-center text-[8px] font-bold uppercase tracking-widest text-white">
                                                                     <div className="flex items-center gap-2 text-white"><Icon name="Plane" size={10}/> Boarding Pass</div>
-                                                                    <span className="text-white text-[10px]">Cathay Pacific</span>
+                                                                    <span>Cathay Pacific</span>
                                                                 </div>
                                                                 <div className="p-5 text-[#4A3728]">
                                                                     <div className="flex justify-between items-end mb-4 text-[#4A3728]">
                                                                         <div><p className="text-[7px] font-black opacity-30 uppercase tracking-widest text-[#A69076]">Passenger</p><p className="text-sm font-black">{activeTraveler.name}</p></div>
-                                                                        <div className="text-right text-[9px] font-bold text-[#4A3728]"><p className="text-[7px] font-black opacity-30 text-[#A69076]">Seat</p><p className="text-sm font-black text-[#5D4037]">{my?.seat || '待定'} <span className="text-[#A69076] font-black ml-1 text-base leading-none text-[#5D4037]">︙</span></p></div>
+                                                                        <div className="text-right text-[9px] font-bold"><p className="text-[7px] font-black opacity-30 text-[#A69076]">Seat</p><p className="text-sm font-black text-[#5D4037]">{my?.seat || '待定'} <span className="text-[#A69076] font-black ml-1 text-base leading-none text-[#5D4037]">︙</span></p></div>
                                                                     </div>
                                                                     <h3 className="text-[12px] font-bold border-b pb-3 mb-3 text-[#4A3728]">{tk.title}</h3>
                                                                     <div className="flex justify-between items-center text-[9px] font-bold text-[#A69076]">
@@ -405,7 +440,7 @@
                                                                     <span className={`text-[7px] font-black uppercase px-2 py-0.5 rounded-sm bg-[#5D4037] text-white`}>{tk.type}</span>
                                                                     <span className="text-[9px] font-bold text-[#A69076]">{tk.date}</span>
                                                                 </div>
-                                                                <p className="text-[13px] font-bold mb-1 leading-tight text-[#4A3728]">{tk.title}</p>
+                                                                <p className="text-[13px] font-bold mb-1 leading-tight">{tk.title}</p>
                                                                 <div className="mt-4 flex justify-between items-end border-t border-dashed border-[#F3EFE0] pt-3 text-[#A69076]">
                                                                     <p className="text-[10px] font-black text-[#8B5E3C]">{activeTraveler.name} 專屬 {my?.seat ? ` | ${my.seat}` : ''}</p>
                                                                     <span className="text-xl font-black text-[#5D4037] opacity-60 text-[#5D4037]">︙</span>
@@ -422,20 +457,28 @@
                                 {/* 3. 記帳分頁 */}
                                 {currentTab === 'expenses' && (
                                     <div className="space-y-4 pb-12 px-1 pt-2 animate-fade-in text-[#4A3728]">
-                                        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 text-[#4A3728]">
+                                        <div 
+                                            ref={scrollRef}
+                                            onMouseDown={handleMouseDown}
+                                            onMouseLeave={handleMouseLeave}
+                                            onMouseUp={handleMouseUp}
+                                            onMouseMove={handleMouseMove}
+                                            className={`flex flex-nowrap gap-2 overflow-x-auto no-scrollbar pb-3 px-1 w-full text-[#4A3728] ${isDragging ? 'cursor-grabbing' : 'cursor-grab'} select-none active:cursor-grabbing`}
+                                            style={{ WebkitOverflowScrolling: 'touch' }}
+                                        >
                                             {dates.map(d => (
-                                                <button key={d.date} onClick={() => setSelectedAccDate(d.date)} className={`shrink-0 flex flex-col items-center justify-center w-12 h-14 rounded-2xl border transition-all duration-300 ${selectedAccDate === d.date ? 'bg-[#5D4037] text-white shadow-lg scale-105 border-[#5D4037]' : 'bg-white text-[#8E7D6A] border-[#EAE3D2]'}`}>
+                                                <button key={d.date} onClick={() => setSelectedAccDate(d.date)} className={`shrink-0 flex flex-col items-center justify-center w-14 h-16 rounded-2xl border transition-all duration-300 ${selectedAccDate === d.date ? 'bg-[#5D4037] text-white shadow-lg scale-105 border-[#5D4037]' : 'bg-white text-[#8E7D6A] border-[#EAE3D2]'}`}>
                                                     <span className="text-[6px] font-black uppercase opacity-60">{d.weekday}</span>
                                                     <span className="text-sm font-bold tracking-tighter">{d.date.split('/')[1]}</span>
                                                 </button>
                                             ))}
                                         </div>
-                                        <div className="bg-[#5D4037] p-6 rounded-[2.5rem] shadow-xl text-white text-center border border-white/5 text-white">
-                                            <p className="text-[7px] font-black uppercase tracking-[0.4em] opacity-40 mb-1 text-center text-white text-opacity-70">Cumulative Balance (¥)</p>
+                                        <div className="bg-[#5D4037] p-6 rounded-[2.5rem] shadow-xl text-white text-center border border-white/5">
+                                            <p className="text-[7px] font-black uppercase tracking-[0.4em] opacity-40 mb-1 text-center text-white text-opacity-70 text-white">Cumulative Balance (¥)</p>
                                             <h2 className="text-4xl font-bold tracking-tighter mb-6 text-white text-white text-opacity-95">¥{financeStats.cumulative.toLocaleString()}</h2>
                                             <div className="grid grid-cols-2 gap-4 border-t border-white/10 pt-4 px-2">
-                                                <div className="text-left text-[#F5F2E9] text-white"><p className="text-[7px] opacity-40 uppercase mb-1 font-black text-white text-opacity-50">Today Inc.</p><p className="text-sm font-bold text-green-300">¥{financeStats.inc.toLocaleString()}</p></div>
-                                                <div className="text-right border-l border-white/10 pl-4 text-stone-300 text-white"><p className="text-[7px] opacity-40 uppercase mb-1 font-black text-white text-opacity-50">Today Exp.</p><p className="text-sm font-bold text-red-300 text-white">¥{financeStats.exp.toLocaleString()}</p></div>
+                                                <div className="text-left text-[#F5F2E9] text-white"><p className="text-[7px] opacity-40 uppercase mb-1 font-black text-white text-opacity-50 text-white">Today Inc.</p><p className="text-sm font-bold text-green-300">¥{financeStats.inc.toLocaleString()}</p></div>
+                                                <div className="text-right border-l border-white/10 pl-4 text-stone-300 text-white"><p className="text-[7px] opacity-40 uppercase mb-1 font-black text-white text-opacity-50 text-white text-white">Today Exp.</p><p className="text-sm font-bold text-red-300 text-white">¥{financeStats.exp.toLocaleString()}</p></div>
                                             </div>
                                         </div>
                                         <div className="bg-white border p-5 rounded-[2rem] shadow-sm text-[#4A3728] border-[#EAE3D2]">
@@ -444,9 +487,9 @@
                                                 <button onClick={() => setExpType('income')} className={`flex-1 py-1.5 text-[9px] font-black rounded-lg transition-all ${expType === 'income' ? 'bg-[#D6C5A0] text-[#4A3728] shadow-md' : ''}`}>收入</button>
                                             </div>
                                             <div className="grid grid-cols-4 gap-2 mb-5">
-                                               {Object.keys(accIconsMap).filter(k => expType === 'income' ? (k === '基金' || k === '罰款') : (k !== '基金' && k !== '罰款')).map(cat => (
+                                               {Object.keys(accIcons).filter(k => expType === 'income' ? (k === '基金' || k === '罰款') : (k !== '基金' && k !== '罰款')).map(cat => (
                                                   <button key={cat} onClick={() => setExpCategory(cat)} className={`flex flex-col items-center gap-1.5 py-2 rounded-xl border transition-all ${expCategory === cat ? 'bg-[#F5F2E9] border-[#5D4037] text-[#5D4037]' : 'bg-white border-[#EEEAE0] text-[#A69076] opacity-60'}`}>
-                                                     <span className="text-lg">{accIconsMap[cat]}</span><span className="text-[8px] font-black">{cat}</span>
+                                                     <span className="text-lg">{accIcons[cat]}</span><span className="text-[8px] font-black">{cat}</span>
                                                   </button>
                                                ))}
                                             </div>
@@ -480,7 +523,7 @@
                                     <div className="space-y-4 pb-10 px-1 pt-2 animate-fade-in text-[#4A3728]">
                                         {staysData.map((h, i) => (
                                             <div key={i} className="bg-white border border-[#EAE3D2] p-5 rounded-2xl shadow-sm text-[#4A3728]">
-                                                <h4 className="font-black text-[13px] flex items-center gap-2 mb-1 uppercase tracking-tight text-[#5D4037] text-opacity-90"><Icon name="Hotel" size={14} className="text-[#8B5E3C] opacity-80"/> {h.name}</h4>
+                                                <h4 className="font-black text-[13px] flex items-center gap-2 mb-1 uppercase tracking-tight text-[#5D4037] text-opacity-90 text-[#4A3728]"><Icon name="Hotel" size={14} className="text-[#8B5E3C] opacity-80"/> {h.name}</h4>
                                                 <p className="text-[9px] text-[#A68B6A] mb-4 font-bold tracking-widest text-[#A68B6A]">{h.period}</p>
                                                 <div className="grid grid-cols-2 gap-3 mb-4 text-[#A69076]">
                                                     <div className="bg-[#FAF9F6] p-2 rounded-lg border border-[#EAE3D2] text-center text-[#A69076]">
@@ -499,7 +542,7 @@
                                     </div>
                                 )}
 
-                                {/* 5. 購物分頁 (加長滾動詳情 + 優惠券按鈕版) */}
+                                {/* 5. 購物分頁 */}
                                 {currentTab === 'shopping' && (
                                     <div className="animate-fade-in pt-2 text-[#4A3728]">
                                         <div className="bg-white border border-[#EAE3D2] shadow-sm rounded-3xl min-h-[500px] flex flex-col overflow-hidden text-[#4A3728]">
@@ -549,8 +592,10 @@
                                                                             </button>
                                                                         </div>
                                                                     </div>
-                                                                    {/* 刪除按鈕位於方框右側 */}
-                                                                    <button onClick={(e) => { e.stopPropagation(); deleteShopItem(item.id); }} className="p-2 text-[#8B5E3C] hover:text-red-500 transition-all active:scale-90 bg-[#F5F2E9] rounded-lg border border-[#EAE3D2] shadow-sm shrink-0" >
+                                                                    <button 
+                                                                        onClick={(e) => { e.stopPropagation(); deleteShopItem(item.id); }} 
+                                                                        className="p-2 text-[#8B5E3C] hover:text-red-500 transition-all active:scale-90 bg-[#F5F2E9] rounded-lg border border-[#EAE3D2] shadow-sm shrink-0"
+                                                                    >
                                                                         <Icon name="X" size={18} />
                                                                     </button>
                                                                 </div>
@@ -571,14 +616,14 @@
 
                         {/* --- 底部導覽列 --- */}
                         <nav className="fixed-nav text-[#4A3728]">
-                            <NavIconButton active={currentTab === 'itinerary'} onClick={() => setCurrentTab('itinerary')} icon="Layout" label="꒰行程♡꒱˚" />
-                            <NavIconButton active={currentTab === 'tickets'} onClick={() => setCurrentTab('tickets')} icon="Ticket" label="꒰票券⋈꒱˚" />
-                            <NavIconButton active={currentTab === 'expenses'} onClick={() => setCurrentTab('expenses')} icon="Wallet" label="꒰記帳⊱꒱˚" />
-                            <NavIconButton active={currentTab === 'stay'} onClick={() => setCurrentTab('stay')} icon="Hotel" label="꒰住宿⌁꒱" />
-                            <NavIconButton active={currentTab === 'shopping'} onClick={() => setCurrentTab('shopping')} icon="ShoppingBag" label="꒰購物✧꒱˚" />
+                            <NavIconButton active={currentTab === 'itinerary'} onClick={() => setCurrentTab('itinerary')} icon="Layout" label="行程" />
+                            <NavIconButton active={currentTab === 'tickets'} onClick={() => setCurrentTab('tickets')} icon="Ticket" label="票券" />
+                            <NavIconButton active={currentTab === 'expenses'} onClick={() => setCurrentTab('expenses')} icon="Wallet" label="記帳" />
+                            <NavIconButton active={currentTab === 'stay'} onClick={() => setCurrentTab('stay')} icon="Hotel" label="住宿" />
+                            <NavIconButton active={currentTab === 'shopping'} onClick={() => setCurrentTab('shopping')} icon="ShoppingBag" label="購物" />
                         </nav>
                         
-                        {/* Overlay 彈窗 (整合修復圖片與票券顯示邏輯) */}
+                        {/* Overlay 彈窗 (整合詳情) */}
                         {selectedOverlay && (
                             <div className="fixed inset-0 z-[100] overlay-backdrop flex flex-col items-center justify-center p-4 animate-fade-in cursor-pointer text-[#4A3728]" onClick={() => setSelectedOverlay(null)}>
                                 <div className="w-full max-w-[340px] pointer-events-auto" onClick={(e) => e.stopPropagation()}>
@@ -599,7 +644,7 @@
                                                         <h4 className="text-sm font-black mb-2 uppercase text-[#4A3728]">Visit Japan Web</h4>
                                                         <div className="p-3 bg-[#F9F8F6] rounded-xl border border-[#EAE3D2] w-full mb-6 text-[#4A3728]">
                                                             <p className="text-[7px] font-black text-[#A69076] uppercase mb-1 text-center text-[#A69076]">乘客預訂編號</p>
-                                                            <p className="text-lg font-black text-[#5D4037] tracking-widest text-center text-[#5D4037]">{selectedOverlay.assignments[activeTraveler.id].code}</p>
+                                                            <p className="text-lg font-black text-[#5D4037] tracking-widest text-center text-[#5D4037]">{selectedOverlay.assignments?.[activeTraveler.id]?.code || 'N/A'}</p>
                                                         </div>
                                                         <button onClick={(e) => { e.stopPropagation(); window.open(selectedOverlay.vjwLink); }} className="w-full bg-[#5D4037] text-white py-4 rounded-2xl font-black text-[11px] shadow-xl hover:bg-[#4A3728] transition-all active:scale-95 text-white">立即填寫</button>
                                                     </div>
@@ -611,7 +656,7 @@
                                                     </div>
                                                 ) : (
                                                     <>
-                                                        {/* 圖片顯示 (修正後的連結格式) */}
+                                                        {/* 圖片顯示 (lh3 直連格式) */}
                                                         {(selectedOverlay.img || selectedOverlay.currentImg || (selectedOverlay.assignments && selectedOverlay.assignments[activeTraveler.id]?.img)) && (
                                                             <div className="w-full aspect-square bg-stone-50 rounded-2xl overflow-hidden mb-5 border border-[#F3EFE0] flex items-center justify-center shrink-0 shadow-sm text-[#4A3728]">
                                                                 <img 
@@ -630,17 +675,22 @@
                                                                         <p className="text-[10px] font-black text-[#8B5E3C] mb-1">✩ 商品簡介</p>
                                                                         <p className="text-[11px] leading-relaxed opacity-80 text-[#4A3728]">{selectedOverlay.intro}</p>
                                                                     </div>
+                                                                    {selectedOverlay.note && (
+                                                                        <div className="bg-orange-50/50 p-3 rounded-xl border border-orange-100">
+                                                                            <p className="text-[10px] font-black text-orange-800 mb-1">✩ 補充說明</p>
+                                                                            <p className="text-[10px] leading-relaxed opacity-80 text-orange-900">{selectedOverlay.note}</p>
+                                                                        </div>
+                                                                    )}
                                                                     <div className="space-y-2">
-                                                                        <div className="bg-[#F5F2E9]/50 p-3 rounded-lg border border-[#EAE3D2] text-center text-[#A69076]"><p className="text-[7px] font-black uppercase opacity-40">日幣價格</p><p className="text-sm font-black text-[#5D4037]">{selectedOverlay.price}</p></div>
-                                                                        <div className="bg-[#F5F2E9]/50 p-3 rounded-lg border border-[#EAE3D2] text-center text-[#A69076]"><p className="text-[7px] font-black opacity-40 uppercase tracking-widest mb-1 tracking-tighter">哪裡買</p><p className="text-[10px] font-bold text-[#4A3728]">{selectedOverlay.store}</p></div>
+                                                                        <div className="bg-[#F5F2E9]/50 p-3 rounded-lg border border-[#EAE3D2] text-center text-[#A69076]"><p className="text-[7px] font-black uppercase opacity-40 text-[#A69076]">日幣價格</p><p className="text-sm font-black text-[#5D4037]">{selectedOverlay.price}</p></div>
+                                                                        <div className="bg-[#F5F2E9]/50 p-3 rounded-lg border border-[#EAE3D2] text-center text-[#A69076]"><p className="text-[7px] font-black opacity-40 uppercase tracking-widest mb-1 tracking-tighter text-[#A69076]">哪裡買</p><p className="text-[10px] font-bold text-[#4A3728]">{selectedOverlay.store}</p></div>
                                                                     </div>
                                                                 </>
                                                             ) : (
                                                                 <div className="p-2 space-y-4 text-[#4A3728]">
-                                                                    {/* 顯示座號 (針對非機票的票券) */}
                                                                     {selectedOverlay.assignments && selectedOverlay.assignments[activeTraveler.id]?.seat && (
                                                                         <div className="p-4 bg-[#F5F2E9] rounded-2xl border border-dashed border-[#D6C5A0] text-center">
-                                                                            <p className="text-[7px] font-black uppercase text-[#A69076] mb-1">座位分配</p>
+                                                                            <p className="text-[7px] font-black uppercase text-[#A69076] mb-1 text-[#A69076]">座位分配</p>
                                                                             <p className="text-lg font-black text-[#5D4037] tracking-widest">{selectedOverlay.assignments[activeTraveler.id].seat}</p>
                                                                         </div>
                                                                     )}
@@ -667,6 +717,7 @@
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
+        /* 藥妝、美妝完成 行程、票券、記帳、住宿皆齊全*/
     </script>
 </body>
 </html>
