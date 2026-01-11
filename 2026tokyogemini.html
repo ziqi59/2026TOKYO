@@ -228,23 +228,73 @@
         ];
 
         // 完整行程資料
-        const fullItineraryData = [
-            { dateIndex: 0, startTime: '11:15', name: '搭乘國泰航空', address: '桃園機場', category: 'Flight', note: '台北一航→大阪一航' },
-            { dateIndex: 0, startTime: '16:00', name: '出海關 & 領票', address: '關西機場', category: 'Package', note: '領取 JR Pass 與 1/18 車票' },
-            { dateIndex: 0, startTime: '16:30', name: '搭乘 HARUKA', address: '機場 JR 月台', category: 'Transport', note: '自由席 | 使用關西周遊券' },
-            { dateIndex: 0, startTime: '晚餐', name: '預計燒肉肉五郎', address: '肉五郎', category: 'Food', note: '營業時間 11:00-23:00' },
-            { dateIndex: 1, startTime: '07:40', name: '抵達環球', address: 'USJ', category: 'Star', note: '衝馬力歐！下載App搶整理券' },
-            { dateIndex: 2, startTime: '09:00', name: '奈良餵鹿', address: '奈良公園', category: 'Sightseeing', note: '預計 10:30 結束' },
-            { dateIndex: 2, startTime: '19:00', name: '六角ACE', address: '六角ACE', category: 'Utensils', note: '✩—aceのポテサラ 580円' },
-            { dateIndex: 3, startTime: '08:30', name: '移動至東京', address: '新大阪站', category: 'Transport', note: '搭乘新幹線 Nozomi' },
-            { dateIndex: 4, startTime: '07:15', name: '富士山之旅', address: '新宿巴士總站', category: 'Transport', note: '高速巴士 1101 班次' },
-            { dateIndex: 4, startTime: '21:04', name: '前往長野', address: '東京站', category: 'Transport', note: '新幹線移動' },
-            { dateIndex: 5, startTime: '08:00', name: '滑雪 Day-1', address: '栂池高原', category: 'Sightseeing', note: '租車出發' },
-            { dateIndex: 6, startTime: '08:00', name: '滑雪 Day-2', address: '栂池高原', category: 'Sightseeing', note: '滑雪挑戰' },
-            { dateIndex: 7, startTime: '09:17', name: '返回東京', address: '長野站', category: 'Transport', note: 'Kagayaki 504' },
-            { dateIndex: 7, startTime: '11:05', name: '前往機場', address: 'JR 日暮里', category: 'Transport', note: 'Skyliner 機場快線' },
-            { dateIndex: 7, startTime: '15:30', name: '搭機返台', address: '成田機場', category: 'Flight', note: '回程 CX451' }
-        ];
+        const defaultTripData = [
+                // 1/15 DAY 1
+                { id: '15_1', dateIndex: 0, startTime: '11:15', name: '搭乘國泰航空', address: '桃園機場', category: 'Flight', note: '11:15-14:55\n台北一航→ 大阪一航' },
+                { id: '15_2', dateIndex: 0, startTime: '16:00', name: '出海關', address: '關西機場第一航廈', category: 'Sightseeing', note: '' },
+                { id: '15_3', dateIndex: 0, startTime: '16:30', name: '搭乘JR HARUKA特急', address: '關西機場JR HARUKA月台', category: 'Transport', note: '使用關西地區鐵路周遊券 自由席' },
+                { id: '15_4', dateIndex: 0, startTime: '17:20', name: '梅田購物', address: 'JR 梅田', category: 'Shopping', note: '' },
+                { id: '15_5', dateIndex: 0, startTime: '晚餐', name: '預計燒肉肉五郎', address: '燒肉 肉五郎 天滿店', category: 'Food', note: '營業時間11:00-23:00\nJR大阪環狀線天滿站步行3分鐘' },
+                { id: '15_6', dateIndex: 0, startTime: '住宿', name: '大阪住處', address: 'Apartment Hotel 11 Higashi Umeda', category: 'Hotel', note: '' },
+
+                // 1/16 DAY 2
+                { id: '16_1', dateIndex: 1, startTime: '06:40', name: '飯店出發', address: 'JR 大阪站', category: 'Transport', note: '步行約 12 分鐘至JR大阪站\nJR大阪站→西九條站 搭乘:JR大阪環狀線\n早餐預計吃711' },
+                { id: '16_2', dateIndex: 1, startTime: '07:40', name: '抵達環球', address: 'USJ環球影城', category: 'Sightseeing', note: '入園直衝馬力歐園區\n\n【入園須知】\n1.提早下載官方App並註冊。\n2.入園後立即抽取整理券。\n3.建議7:00前抵達現場排隊。\n4.禁帶外食。' },
+                { id: '16_3', dateIndex: 1, startTime: '20:00', name: '閉園時間', address: '超市', category: 'Food', note: '晚餐預計吃超市' },
+                { id: '16_4', dateIndex: 1, startTime: '住宿', name: '大阪住處', address: 'Apartment Hotel 11 Higashi Umeda', category: 'Hotel', note: '' },
+
+                // 1/17 DAY 3
+                { id: '17_1', dateIndex: 2, startTime: '07:40', name: '飯店出發', address: 'JR 大阪站', category: 'Transport', note: '步行約 12 分鐘至JR大阪站\n大阪站→ 奈良站 搭乘:JR大和路快速(50min)\n早餐預計吃711' },
+                { id: '17_2', dateIndex: 2, startTime: '08:50', name: '前往奈良公園', address: 'JR 奈良站', category: 'Transport', note: 'JR奈良站東口→「奈良公園前」 或 「県庁前」 下車' },
+                { id: '17_3', dateIndex: 2, startTime: '09:00', name: '餵鹿散步', address: '奈良公園', category: 'Sightseeing', note: '預計10:30結束\n奈良公園→ JR奈良站(走20min)' },
+                { id: '17_4', dateIndex: 2, startTime: '11:00', name: '前往京都', address: 'JR 奈良站', category: 'Transport', note: 'JR奈良站→ JR京都站 搭乘:JR 奈良線快速(45min)' },
+                { id: '17_5', dateIndex: 2, startTime: '12:00', name: '錦市場吃午餐', address: '錦市場', category: 'Food', note: '京都站→ 四条站 搭乘:京都市營地下鐵烏丸線(4min)\n四条站→ 錦市場(走5min)' },
+                { id: '17_6', dateIndex: 2, startTime: '13:30', name: '逛街', address: '二年坂 三年坂', category: 'Shopping', note: '花見小路、二年坂 三年坂 散步\n預計18:20離開' },
+                { id: '17_7', dateIndex: 2, startTime: '19:00', name: '六角ACE', address: '六角ACE', category: 'Food', note: '✧烏丸御池站 5號出口左轉，步行10min ⸝⸝✧17:00-23:00\n✩—aceのポテサラ 580円 糖心蛋馬鈴薯\n✩—ハラミステーキ 1180円 裙子牛排\n✩—とうもろこしの唐揚 600円 炸玉米\n✩—キウイサワー 580円 奇異果沙瓦' },
+                { id: '17_8', dateIndex: 2, startTime: '20:30', name: '回梅田', address: 'JR 京都站', category: 'Transport', note: '京都 → 梅田 搭乘:JR 京都線（新快速）(30min)' },
+                { id: '17_9', dateIndex: 2, startTime: '住宿', name: '大阪住處', address: 'Apartment Hotel 11 Higashi Umeda', category: 'Hotel', note: '今天要整理行李啦' },
+
+                // 1/18 DAY 4
+                { id: '18_1', dateIndex: 3, startTime: '08:00', name: '飯店出發(帶行李)', address: '新大阪站', category: 'Transport', note: '08:30新大阪→ 10:49品川 搭乘:東海道新幹線 Nozomi 13號車\n品川 → 新宿 搭乘:山手線 於北轉乘口 2號月台' },
+                { id: '18_2', dateIndex: 3, startTime: '12:00', name: '寄放行李', address: 'Shinjuku sprem', category: 'Hotel', note: '先回飯店寄放行李 走路10min' },
+                { id: '18_3', dateIndex: 3, startTime: '午餐', name: '與美優吃飯', address: '地點尚未決定', category: 'Food', note: '決定好在打上來' },
+                { id: '18_4', dateIndex: 3, startTime: '晚餐', name: '尚未決定', address: '地點尚未決定', category: 'Food', note: '決定好在打上來' },
+                { id: '18_5', dateIndex: 3, startTime: '住宿', name: '新宿住處', address: 'Shinjuku sprem', category: 'Hotel', note: '樓層3樓\n今天要早睡+整理行李' },
+
+                // 1/19 DAY 5
+                { id: '19_1', dateIndex: 4, startTime: '06:50', name: '出發搭巴士', address: '新宿巴士總站', category: 'Transport', note: '07:15新宿巴士總站→ 09:07富士山駅 搭乘:高速巴士 車次編號1101\n富士山駅 →下吉田駅 搭乘: 計程車 ¥1,200 (8分鐘)' },
+                { id: '19_2', dateIndex: 4, startTime: '09:20', name: '下吉田 本町通', address: '本町通', category: 'Sightseeing', note: '拍富士山街景\n向新倉山淺間公園走去' },
+                { id: '19_3', dateIndex: 4, startTime: '10:00', name: '新倉山淺間公園', address: '忠靈塔', category: 'Sightseeing', note: '要爬80層樓梯\n朱印資訊稍後打上' },
+                { id: '19_4', dateIndex: 4, startTime: '午餐', name: '本町通周邊漫步', address: '本町通', category: 'Food', note: '到處吃吃逛逛\n推薦美食稍後打上' },
+                { id: '19_5', dateIndex: 4, startTime: '12:30', name: '前往河口湖', address: '下吉田站', category: 'Transport', note: '下吉田 →河口湖站 搭乘:富士急行線' },
+                { id: '19_6', dateIndex: 4, startTime: '13:00', name: '富士山全景纜車', address: '富士山全景纜車', category: 'Sightseeing', note: '確保在日落前能完成纜車和山頂觀景，避免被逆光陰影遮擋。\n票券資訊稍後補上' },
+                { id: '19_7', dateIndex: 4, startTime: '16:20', name: '前往河口湖巴士站', address: '河口湖巴士站', category: 'Transport', note: '16:40河口湖駅 →18:25新宿巴士總站 搭乘:高速巴士 車次編號1124' },
+                { id: '19_8', dateIndex: 4, startTime: '18:40', name: '領行李&吃晚餐', address: 'Shinjuku sprem', category: 'Food', note: '回飯店領行李、吃簡單晚餐(趕的話買去車上吃)' },
+                { id: '19_9', dateIndex: 4, startTime: '20:30', name: '轉點東京車站', address: '新宿站', category: 'Transport', note: '新宿→東京 搭乘:JR 中央線快速\n走到新幹線月台約 5–15 分' },
+                { id: '19_10', dateIndex: 4, startTime: '21:00', name: '搭去長野', address: '東京站', category: 'Transport', note: '21:04東京Tokyo→ 22:23長野Nagano 搭乘:Kagayaki 519\n走到新幹線月台約 5–15 分' },
+                { id: '19_11', dateIndex: 4, startTime: '住宿', name: '長野住處', address: 'Sotetsu Fresa Inn', category: 'Hotel', note: '善光寺口 步行約 2 分鐘' },
+
+                // 1/20 DAY 6
+                { id: '20_1', dateIndex: 5, startTime: '08:00', name: '飯店出發租車', address: 'Toyota Rent-A-Car', category: 'Transport', note: '走路15分鐘\n租車注意事項' },
+                { id: '20_2', dateIndex: 5, startTime: '08:40', name: '自駕至栂池高原滑雪場', address: '栂池高原滑雪場', category: 'Sightseeing', note: '日間滑雪 08:00 至 17:00\n滑雪注意事項' },
+                { id: '20_3', dateIndex: 5, startTime: '晚餐', name: '尚未決定', address: '地點尚未決定', category: 'Food', note: '決定好在打上來' },
+                { id: '20_4', dateIndex: 5, startTime: '住宿', name: '長野住處', address: 'Sotetsu Fresa Inn', category: 'Hotel', note: '善光寺口 步行約 2 分鐘' },
+
+                // 1/21 DAY 7
+                { id: '21_1', dateIndex: 6, startTime: '08:00', name: '自駕至栂池高原滑雪場', address: '栂池高原滑雪場', category: 'Sightseeing', note: '日間滑雪 08:00 至 17:00\n滑雪注意事項' },
+                { id: '21_2', dateIndex: 6, startTime: '午餐', name: '尚未決定', address: '栂池高原滑雪場', category: 'Food', note: '決定好在打上來' },
+                { id: '21_3', dateIndex: 6, startTime: '20:00', name: '還車', address: 'Toyota Rent-A-Car', category: 'Transport', note: '要記得加滿油' },
+                { id: '21_4', dateIndex: 6, startTime: '晚餐', name: '尚未決定', address: '地點尚未決定', category: 'Food', note: '決定好在打上來' },
+                { id: '21_5', dateIndex: 6, startTime: '住宿', name: '長野住處', address: 'Sotetsu Fresa Inn', category: 'Hotel', note: '善光寺口 步行約 2 分鐘\n今天要整理行李' },
+
+                // 1/22 DAY 8
+                { id: '22_1', dateIndex: 7, startTime: '09:00', name: 'JR長野搭車', address: 'JR長野站', category: 'Transport', note: '09:17長野Nagano→10:31上野Ueno 搭乘:Kagayaki 504' },
+                { id: '22_2', dateIndex: 7, startTime: '10:45', name: '日暮里轉乘', address: 'JR上野', category: 'Transport', note: '10:47 JR上野Ueno→ 10:50 JR日暮里Nippori' },
+                { id: '22_3', dateIndex: 7, startTime: '11:05', name: '前往成田機場', address: 'JR日暮里', category: 'Transport', note: '日暮里Nippori → 成田機場 搭乘:Skyliner\n\n【注意事項】\n1.持QR Code至售票機換實體票。\n2.日暮里轉乘需經過專用改札口。' },
+                { id: '22_4', dateIndex: 7, startTime: '12:30', name: '成田機場逛伴手禮', address: '成田機場', category: 'Shopping', note: '預計13:30過海關' },
+                { id: '22_5', dateIndex: 7, startTime: '住宿', name: '長野住處', address: 'Sotetsu Fresa Inn', category: 'Hotel', note: '善光寺口 步行約 2 分鐘\n今天要整理行李' },
+                { id: '22_6', dateIndex: 7, startTime: '15:30', name: '搭乘國泰航空', address: '東京機場', category: 'Flight', note: '15:30-18:40\n東京二航→ 台北一航\n國泰CX451 波音 777-300' }
+            ];
 
         // 住宿資料定義
         const staysData = [
@@ -420,7 +470,7 @@
                                                     </button>
                                                     {isExpanded && (
                                                         <div className="px-5 pb-5 space-y-4 border-t pt-4 animate-fade-in">
-                                                            {sortedDayTrips(fullItineraryData.filter(t => t.dateIndex === i)).map((trip, idx) => (
+                                                            {sortedDayTrips(defaultTripData.filter(t => t.dateIndex === i)).map((trip, idx) => (
                                                                 <div key={idx} className="flex gap-4">
                                                                     <span className="text-[9px] font-black py-1 h-5 min-w-[38px] bg-[#FAF9F6] border border-[#EAE3D2] text-center rounded shadow-xs">{trip.startTime}</span>
                                                                     <div className="flex-1">
