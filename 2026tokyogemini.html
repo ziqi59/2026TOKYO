@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>2026日本遊٩(ˊᗜˋ*)و</title>
-    <!-- [CDN 載入區] -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -34,7 +33,7 @@
             -webkit-backdrop-filter: blur(10px);
         }
 
-        /* 內容區墊高 */
+        /* 內容區墊高，避免被底部 46px 導覽列遮擋 */
         .content-padding { padding-bottom: 70px; }
 
         /* 底部固定導覽列樣式 (極致扁平 46px) */
@@ -53,11 +52,10 @@
 <body class="bg-[#DED9CE]">
     <div id="root"></div>
 
-    <!-- [主程式邏輯區] -->
     <script type="text/babel">
         const { useState, useEffect, useMemo, useRef } = React;
 
-        // --- 1. 組件宣告 (確保在 App 之前宣告以避免 ReferenceError) ---
+        // --- 1. 基礎子組件定義 ---
 
         const FujiIllustration = () => (
             <svg viewBox="0 0 200 100" className="w-14 h-auto opacity-20 text-[#8B5E3C]">
@@ -79,7 +77,11 @@
                         "Shopping": "ShoppingBag", "Layout": "Layout", "Ticket": "Ticket", 
                         "Wallet": "Wallet", "Hotel": "Hotel", "ShoppingBag": "ShoppingBag",
                         "Tag": "Tag", "Check": "Check", "X": "X", "Link": "ExternalLink", 
-                        "Navigation": "Navigation", "Zap": "Zap", "MoreHorizontal": "MoreHorizontal"
+                        "Navigation": "Navigation", "Zap": "Zap", "Utensils": "Utensils", 
+                        "Package": "Package", "ChevronRight": "ChevronRight", 
+                        "ChevronLeft": "ChevronLeft", "ChevronDown": "ChevronDown", "ChevronUp": "ChevronUp", 
+                        "Info": "Info", "CreditCard": "CreditCard", "User": "User", "MapPin": "MapPin", "Map": "Map",
+                        "Sparkles": "Sparkles", "ShoppingBasket": "ShoppingBasket", "Luggage": "Luggage", "Scan": "ScanFace", "QrCode": "QrCode"
                     };
                     const targetName = iconMap[name] || name;
                     const kebabName = targetName.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
@@ -93,22 +95,30 @@
 
         const WeatherDisplay = ({ lat, lon }) => {
             const [weather, setWeather] = useState({ temp: '--', icon: '☼' });
-            const fetchWeather = async () => {
+            
+            const fetchWeather = async (retryCount = 0) => {
                 try {
+                    await new Promise(resolve => setTimeout(resolve, Math.random() * 1000));
                     const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
+                    if (!res.ok) throw new Error("API Limit");
                     const data = await res.json();
                     const temp = Math.round(data.current_weather.temperature);
                     const code = data.current_weather.weathercode;
-                    let icon = '☼'; 
+                    const isDay = data.current_weather.is_day; 
+                    
+                    let icon = isDay === 1 ? '☼' : '☾'; 
                     if ([1, 2, 3, 45, 48].includes(code)) icon = '༄'; 
                     if ([51, 53, 55, 61, 63, 65, 80, 81, 82, 95, 96, 99].includes(code)) icon = '⛈︎'; 
                     if ([71, 73, 75, 77, 85, 86].includes(code)) icon = '❅'; 
+                    
                     setWeather({ temp: `${temp}°C`, icon });
-                } catch (e) { console.error("Weather Load Error"); }
+                } catch (e) { 
+                    if (retryCount < 3) setTimeout(() => fetchWeather(retryCount + 1), 3000);
+                }
             };
-            useEffect(() => { fetchWeather(); const t = setInterval(fetchWeather, 3600000); return () => clearInterval(t); }, [lat, lon]);
+            useEffect(() => { fetchWeather(); }, [lat, lon]);
             return (
-                <div className="flex flex-col items-end border-l pl-3 border-[#F3EFE0] text-[#5D4037] shrink-0">
+                <div className="flex flex-col items-end border-l pl-3 border-[#F3EFE0] shrink-0 text-[#4A3728]">
                     <span className="text-xl font-bold leading-none mb-0.5">{weather.icon}</span>
                     <span className="text-[10px] font-bold">{weather.temp}</span>
                 </div>
@@ -122,7 +132,7 @@
             </button>
         );
 
-        // --- 2. 全域資料定義 (行程、票券、住宿、記帳、購物) ---
+        // --- 2. 全域靜態資料定義 ---
 
         const travelers = [
             { id: 'goldfish', name: '金魚', color: '#8B5E3C', emoji: '🐠' },
@@ -132,120 +142,134 @@
         ];
 
         const dates = [
-            { date: '1/15', weekday: '木', title: 'DAY 1 ꒰ 梅田抵達:.。.☆', loc: { lat: 34.702, lon: 135.496, name: '梅田' } },
-            { date: '1/16', weekday: '金', title: 'DAY 2 ꒰ USJ環球影城♡ﾞ', loc: { lat: 34.694, lon: 135.502, name: '大阪市' } },
-            { date: '1/17', weekday: '土', title: 'DAY 3 ꒰ 奈良京都遊𝜗𝜚 ｡˚', loc: { lat: 35.011, lon: 135.768, name: '京都市' } },
-            { date: '1/18', weekday: '日', title: 'DAY 4 ꒰ 大阪➳新宿', loc: { lat: 35.689, lon: 139.692, name: '新宿市' } },
-            { date: '1/19', weekday: '月', title: 'DAY 5 ꒰ 富士山の日✿˖°', loc: { lat: 35.503, lon: 138.767, name: '山梨縣' } },
-            { date: '1/20', weekday: '火', title: 'DAY 6 ꒰ 栂池滑雪Day-1', loc: { lat: 36.648, lon: 138.194, name: '長野市' } },
-            { date: '1/21', weekday: '水', title: 'DAY 7 ꒰ 栂池滑雪Day-2', loc: { lat: 36.698, lon: 137.861, name: '白馬地區' } },
-            { date: '1/22', weekday: '木', title: 'DAY 8 ꒰ 桃園平安回家 ꒱', loc: { lat: 25.013, lon: 121.215, name: '桃園' } },
+            { date: '1/15', weekday: '木', title: 'DAY 1 ꒰ 梅田抵達:.。.☆', loc: { lat: 34.70, lon: 135.50, name: '大阪' } },
+            { date: '1/16', weekday: '金', title: 'DAY 2 ꒰ USJ環球影城♡ﾞ', loc: { lat: 34.66, lon: 135.43, name: '大阪' } },
+            { date: '1/17', weekday: '土', title: 'DAY 3 ꒰ 奈良京都遊𝜗𝜚 ｡˚', loc: { lat: 35.01, lon: 135.76, name: '京都' } },
+            { date: '1/18', weekday: '日', title: 'DAY 4 ꒰ 大阪 ➳ 新宿移動', loc: { lat: 35.68, lon: 139.76, name: '東京' } },
+            { date: '1/19', weekday: '月', title: 'DAY 5 ꒰ 富士山河口湖 ꒱', loc: { lat: 35.49, lon: 138.76, name: '富士' } },
+            { date: '1/20', weekday: '火', title: 'DAY 6 ꒰ 栂池滑雪 Day-1 ꒱', loc: { lat: 36.64, lon: 138.19, name: '長野' } },
+            { date: '1/21', weekday: '水', title: 'DAY 7 ꒰ 栂池滑雪 Day-2 ꒱', loc: { lat: 36.64, lon: 138.19, name: '長野' } },
+            { date: '1/22', weekday: '木', title: 'DAY 8 ꒰ 桃園平安回家 ꒱', loc: { lat: 25.01, lon: 121.21, name: '桃園' } },
         ];
 
-        const staysData = [
-            { name: 'Apartment Hotel 11 Higashi Umeda', period: '1/15 — 1/18', checkIn: '15:00', checkOut: '11:00', distance: 'JR 大阪站步行 12 分鐘', luggage: '可寄放 (需聯絡)', nearby: 'Life 超市、唐吉', note: '自助密碼鎖入住' },
-            { name: 'Shinjuku sprem', period: '1/18 — 1/19', checkIn: '16:00', checkOut: '10:00', distance: 'JR 新宿站南口步行 10 分鐘', luggage: '12:00 後才可寄放', nearby: 'FamilyMart', note: '位於 3 樓 (無電梯)' },
-            { name: 'Sotetsu Fresa Inn 善光寺口', period: '1/19 — 1/22', checkIn: '15:00', checkOut: '11:00', distance: 'JR 長野站正對面步行 2 分鐘', luggage: '全天寄放', nearby: 'MIDORI、7-11', note: '交通極便利' }
-        ];
-
-        // 修正後的票券連結
+        // 十大票券庫
         const ticketsData = [
             { id: 'tk1', type: 'Flight', title: '國泰航空 CX564 (台北→大阪)', date: '1/15 11:15', assignments: { goldfish: { code: 'DGL2ET', seat: '待選' }, penguin: { code: 'DGL2ET', seat: '待選' }, zhi: { code: 'DH5MG7', seat: '待選' }, spasm: { code: 'DH5MG7', seat: '待選' } }, isVJW: true, vjwLink: 'https://www.vjw.digital.go.jp/' },
-            { id: 'tk2', type: 'Pass', title: '關西地區鐵路周遊券', date: '1/15', isJR: true, details: { no: '40376', card: '1668', notice: '持護照於JR窗口領取' } },
-            { id: 'tk3', type: 'Ticket', title: 'USJ 日本環球影城門票', date: '1/16', assignments: { goldfish: { img: 'https://lh3.googleusercontent.com/d/1OcyV3zuqQkXMTtOerNEoMBuXCuSxAoOK' }, penguin: { img: 'https://lh3.googleusercontent.com/d/1MzFWNFr9lKDFtwg902ziO4-KhLeKRPGL' }, zhi: { img: 'https://lh3.googleusercontent.com/d/1ic2KFekF4jO403KVeLGMmOamFoxVcu7r' }, spasm: { img: 'https://lh3.googleusercontent.com/d/1P82cswIIyvEtvvVFIpb6Lj0sQqKBqyhq' } } },
-            { id: 'tk4', type: 'Train', title: '新幹線 Nozomi (新大阪→品川)', date: '1/18 08:30', assignments: { zhi: { seat: '13-1-B' }, spasm: { seat: '13-1-C' }, penguin: { seat: '13-1-D' }, goldfish: { seat: '13-1-E' } } },
-            { id: 'tk7', type: 'Train', title: '新幹線 Kagayaki 519 (長野)', date: '1/19 21:04', assignments: { zhi: { seat: '6-17-D' }, spasm: { seat: '6-17-E' }, penguin: { seat: '6-18-D' }, goldfish: { seat: '6-18-E' } } },
-            { id: 'tk9', type: 'Ticket', title: 'Skyliner (機場快線)', date: '1/22 11:05', currentImg: 'https://lh3.googleusercontent.com/d/1TqPXatdp3FU501uBio-4ahi6SJIRKEua' },
-            { id: 'tk10', type: 'Flight', title: '國泰航空 CX451 (回程)', date: '1/22 15:30', assignments: { goldfish: { code: 'CX451', seat: '待選' }, penguin: { code: 'CX451', seat: '待選' }, zhi: { code: 'CX451', seat: '待選' }, spasm: { code: 'CX451', seat: '待選' } }, isVJW: true, vjwLink: 'https://www.vjw.digital.go.jp/' }
+            { 
+                id: 'tk2', 
+                type: 'Pass', 
+                title: '關西地區鐵路周遊券', 
+                date: '1/15', 
+                isJR: true, 
+                details: { 
+                    no: '40376', 
+                    card: '1668 (實體卡)', 
+                    authCode: '自備 4 碼', 
+                    passports: '所有使用者護照正本 (4人)\n(可以把1/18票券一同領取)', 
+                    period: '1/15 - 1/17 有效', 
+                    location: 'Kansai-airport (關西機場站)', 
+                    receiveInfo: '車站窗口或驗票口外售票機 (綠色機台含護照掃描功能)',
+                    receiveLink: 'https://www.westjr.co.jp/global/tc/howto/train-reservation/receive/',
+                    notice: '1. 必須在 1/15 (含) 之前領取。\n2. 不接受虛擬卡，需出示結帳實體信用卡。\n3. 驗票口內售票機無法領取。' 
+                } 
+            },
+            { 
+                id: 'tk3', 
+                type: 'Ticket', 
+                title: 'USJ 日本環球影城門票', 
+                date: '1/16', 
+                assignments: { 
+                    goldfish: { img: 'https://lh3.googleusercontent.com/d/1OcyV3zuqQkXMTtOerNEoMBuXCuSxAoOK', fullTicketLink: 'https://drive.google.com/file/d/1jkOGLgJ0DdxtZUROKcBdze1v5wJGrzRx/view?usp=drive_link' }, 
+                    penguin: { img: 'https://lh3.googleusercontent.com/d/1MzFWNFr9lKDFtwg902ziO4-KhLeKRPGL', fullTicketLink: 'https://drive.google.com/file/d/1kb5NzZjNu3yHEG7BcV3c8p_Pn0W15Irc/view?usp=drive_link' }, 
+                    zhi: { img: 'https://lh3.googleusercontent.com/d/1ic2KFekF4jO403KVeLGMmOamFoxVcu7r', fullTicketLink: 'https://drive.google.com/file/d/1rfa4G0PfLSYoQnd2E8MHE3B80OQ47jkO/view?usp=drive_link' }, 
+                    spasm: { img: 'https://lh3.googleusercontent.com/d/1P82cswIIyvEtvvVFIpb6Lj0sQqKBqyhq', fullTicketLink: 'https://drive.google.com/file/d/1kfnQYPmi3W68rJpuUA7j1BfltgtW1o8Q/view?usp=drive_link' } 
+                },
+                isUSJ: true,
+                mapLink: 'https://drive.google.com/file/d/1PmA35rbRYDdi9hc0ClNl8p4RAioCT32x/view?usp=drive_link',
+                notices: {
+                    entry: '1. 進門選「從左到右第2門」左排：人少速度最快。\n2. 進園後「往右衝下樓梯」直奔瑪利歐。',
+                    shopping: '單筆滿5,500円可辦退稅 (憑發票+護照)。',
+                    food: '「星星爆米花桶」在大門大街買比園區快。',
+                    storage: '強制寄物：好萊塢美夢、SPY、哈利波特、飛天翼龍。'
+                }
+            },
+            { 
+                id: 'tk4', 
+                type: 'Train', 
+                title: '新幹線 Nozomi 2 (新大阪→品川)', 
+                date: '1/18 08:30', 
+                assignments: { zhi: { seat: '13號車 1號 B位' }, spasm: { seat: '13號車 1號 C位' }, penguin: { seat: '13號車 1號 D位' }, goldfish: { seat: '13號車 1號 E位' } },
+                isNozomi: true,
+                details: { no: '49329', card: '1668 (實體卡)', authCode: '自備 4 碼', period: '1/18 有效', location: '新大阪站 (窗口或驗票口外售票機)', receiveLink: 'https://www.westjr.co.jp/global/tc/howto/train-reservation/receive/', notice: '1. 領取車票後方可上車。\n2. 變更僅限 1 次。' }
+            },
+            { id: 'tk5', type: 'Bus', title: '高速巴士 往程 (1101 班次)', date: '1/19 07:15', isHighwayBus: true, details: { no: '1101', busNo: '1', route: '新宿總站 ➔ 富士山站', tickets: '大人 4 人', link: 'https://www.highwaybus.com/gp/inbound/inbWebticketPrint?3646e9862c4c4fbcfc3636dd722fb157&lang=CZ1&ticket_type=mobile#1', notice: '請點選下方連結發行 Web Ticket。' } },
+            { id: 'tk6', type: 'Bus', title: '高速巴士 返程 (1124 班次)', date: '1/19 16:40', isHighwayBus: true, details: { no: '1124', busNo: '1', route: '河口湖站 ➔ 新宿總站', tickets: '大人 4 人', link: 'https://www.highwaybus.com/gp/inbound/inbWebticketPrint?3646e9862c4c4fbcfc3636dd722fb157&lang=CZ1&ticket_type=mobile#2', notice: '請點選下方連結發行 Web Ticket。' } },
+            { id: 'tk7', type: 'Train', title: '新幹線 Kagayaki 519 (東京→長野)', date: '1/19 21:04', assignments: { zhi: { seat: '6號車 17號 D位' }, spasm: { seat: '6號車 17號 E位' }, penguin: { seat: '6號車 18號 D位' }, goldfish: { seat: '6號車 18號 E位' } } },
+            { id: 'tk8', type: 'Train', title: '新幹線 Kagayaki 504 (長野→上野)', date: '1/22 09:17', assignments: { zhi: { seat: '8號車 18號 D位' }, spasm: { seat: '8號車 18號 E位' }, penguin: { seat: '8號車 19號 D位' }, goldfish: { seat: '8號車 19號 E位' } } },
+            { 
+                id: 'tk9', 
+                type: 'Ticket', 
+                title: 'Skyliner (機場快線)', 
+                date: '1/22 11:05', 
+                isSkyliner: true,
+                // 更新：使用 Embed 直連格式確保圖片能顯示
+                currentImg: 'https://lh3.googleusercontent.com/d/1TqPXatdp3FU501uBio-4ahi6SJIRKEua',
+                details: {
+                    no: '91-140767261',
+                    pin: '5872',
+                    adults: '4 人',
+                    validity: '2026/02/02',
+                    representative: 'CHIHTZUCHI',
+                    route: '日暮里 ➔ 成田機場 2/3 航廈',
+                    notice: '1. 出示 QR 碼或購買詳情頁面兌換。\n2. 若使用臉部辨識服務 (Go)則無需換票，直接前往專屬閘機。'
+                }
+            },
+            { id: 'tk10', type: 'Flight', title: '國泰航空 CX451 (回程)', date: '1/22 15:30', assignments: { goldfish: { code: 'CX451', seat: '待選' }, penguin: { code: 'CX451', seat: '待選' }, zhi: { code: 'CX451', seat: '待選' }, spasm: { code: 'CX451', seat: '待選' } }, note: '回程 CX451' }
         ];
 
+        // 完整行程資料
         const fullItineraryData = [
-            // 1/15 DAY-1
-            { dateIndex: 0, startTime: '11:15', name: '搭乘國泰航空', address: '桃園機場', category: 'Flight', note: '11:15-14:55\n台北一航→ 大阪一航' },
-            { dateIndex: 0, startTime: '16:00', name: '出海關', address: '關西機場第一航廈', category: 'MapIcon', note: '' },
-            { dateIndex: 0, startTime: '16:30', name: '搭乘JR HARUKA特急', address: '關西機場JR HARUK的位置', category: 'Transport', note: '使用關西地區鐵路周遊券 自由席' },
-            { dateIndex: 0, startTime: '17:20', name: '梅田購物', address: 'JR梅田', category: 'Shopping', note: '' },
-            { dateIndex: 0, startTime: '晚餐', name: '預計燒肉肉五郎', address: '肉五郎', category: 'Food', note: '營業時間11:00-23:00\nJR大阪環狀線天滿站步行3分鐘' },
-            { dateIndex: 0, startTime: '住宿', name: '大阪住處', address: 'Apartment Hotel 11 Higashi Umeda', category: 'Hotel', note: '' },
-            
-            // 1/16 DAY-2
-            { dateIndex: 1, startTime: '6:40', name: '飯店出發', address: 'JR 大阪站', category: 'Transport', note: '步行約 12 分鐘至JR大阪站\nJR大阪站→西九條站 搭乘:JR大阪環狀線\n早餐預計吃711' },
-            { dateIndex: 1, startTime: '7:40', name: '抵達環球', address: 'USJ環球影城', category: 'Sightseeing', note: '入園直衝馬力歐園區\n\n【入園須知】\n1.提早下載官方App並登錄門票\n2.抽區域整理券\n3.禁帶外食' },
-            { dateIndex: 1, startTime: '20:00', name: '閉園時間', address: '超市', category: 'Food', note: '晚餐預計吃超市' },
-            { dateIndex: 1, startTime: '住宿', name: '大阪住處', address: 'Apartment Hotel 11 Higashi Umeda', category: 'Hotel', note: '' },
-
-            // 1/17 DAY-3
-            { dateIndex: 2, startTime: '7:40', name: '飯店出發', address: 'JR 大阪站', category: 'Transport', note: '步行約 12 分鐘至JR大阪站\n大阪站→ 奈良站 搭乘:JR大和路快速(50min)\n早餐預計吃711' },
-            { dateIndex: 2, startTime: '8:50', name: '前往奈良公園', address: 'JR 奈良站', category: 'Transport', note: 'JR奈良站東口→「奈良公園前」 或 「県庁前」 下車' },
-            { dateIndex: 2, startTime: '9:00', name: '餵鹿散步', address: '奈良公園', category: 'Sightseeing', note: '預計10:30結束\n奈良公園→ JR奈良站(走20min)' },
-            { dateIndex: 2, startTime: '11:00', name: '前往京都', address: 'JR 奈良站', category: 'Transport', note: 'JR奈良站→ JR京都站 搭乘:JR 奈良線快速(45min)' },
-            { dateIndex: 2, startTime: '12:00', name: '錦市場吃午餐', address: '錦市場', category: 'Food', note: '京都站→ 四条站 搭乘:京都市營地下鐵烏丸線(4min)\n四条站→ 錦市場(走5min)' },
-            { dateIndex: 2, startTime: '13:30', name: '逛街', address: '二年坂 三年坂', category: 'Shopping', note: '花見小路、二年坂 三年坂 散步\n預計18:20離開' },
-            { dateIndex: 2, startTime: '19:00', name: '六角ACE', address: '六角ACE', category: 'Food', note: '✧烏丸御池站 5號出口左轉，步行10min ⸝⸝✧17:00-23:00\n✩—aceのポテサラ 580円 (糖心蛋馬鈴薯)\n✩—ハラミステーキ 1180円 (裙子牛排)\n✩—とうもろこしの唐揚 600円 (炸玉米)\n✩—キウイサワー 580円 (奇異果沙瓦)' },
-            { dateIndex: 2, startTime: '20:30', name: '回梅田', address: 'JR 京都站', category: 'Transport', note: '京都 → 梅田 搭乘:JR 京都線（新快速）(30min)' },
-            { dateIndex: 2, startTime: '住宿', name: '大阪住處', address: 'Apartment Hotel 11 Higashi Umeda', category: 'Hotel', note: '今天要整理行李啦' },
-
-            // 1/18 DAY-4
-            { dateIndex: 3, startTime: '8:00', name: '飯店出發(帶行李)', address: '新大阪站', category: 'Transport', note: '08:30新大阪→ 10:49品川 搭乘:東海道新幹線 Nozomi 13號車\n品川 → 新宿 搭乘:山手線 於北轉乘口 2號月台' },
-            { dateIndex: 3, startTime: '12:00', name: '寄放行李', address: 'Shinjuku sprem', category: 'Hotel', note: '先回飯店寄放行李 走路10min' },
-            { dateIndex: 3, startTime: '午餐', name: '與美優吃飯', address: '地點尚未決定', category: 'Food', note: '決定好在打上來' },
-            { dateIndex: 3, startTime: '晚餐', name: '尚未決定', address: '地點尚未決定', category: 'Food', note: '決定好在打上來' },
-            { dateIndex: 3, startTime: '住宿', name: '新宿住處', address: 'Shinjuku sprem', category: 'Hotel', note: '樓層3樓\n今天要早睡+整理行李' },
-
-            // 1/19 DAY-5
-            { dateIndex: 4, startTime: '6:50', name: '出發搭巴士', address: '新宿巴士總站', category: 'Transport', note: '07:15新宿巴士總站→ 09:07富士山駅 搭乘:高速巴士 編號1101\n富士山駅 →下吉田駅 搭乘: 計程車 ¥1,200 (8分鐘)' },
-            { dateIndex: 4, startTime: '9:20', name: '下吉田 本町通', address: '本町通', category: 'Sightseeing', note: '拍富士山街景\n向新倉山淺間公園走去' },
-            { dateIndex: 4, startTime: '10:00', name: '新倉山淺間公園', address: '忠靈塔', category: 'Sightseeing', note: '要爬80層樓梯\n朱印資訊稍後打上' },
-            { dateIndex: 4, startTime: '午餐', name: '本町通周邊漫步', address: '本町通定', category: 'Food', note: '到處吃吃逛逛\n推薦美食稍後打上' },
-            { dateIndex: 4, startTime: '12:30', name: '前往河口湖', address: '下吉田站', category: 'Transport', note: '下吉田 →河口湖站 搭乘:富士急行線' },
-            { dateIndex: 4, startTime: '13:00', name: '富士山全景纜車', address: '富士山全景纜車', category: 'Sightseeing', note: '確保在日落前能完成纜車和山頂觀景，避免山體被逆光陰影遮擋。' },
-            { dateIndex: 4, startTime: '16:20', name: '前往河口湖巴士站', address: '河口湖巴士站', category: 'Transport', note: '16:40河口湖駅 →18:25新宿巴士總站 搭乘:高速巴士 編號1124' },
-            { dateIndex: 4, startTime: '18:40', name: '領行李&吃晚餐', address: 'Shinjuku sprem', category: 'Food', note: '回飯店領行李、吃簡單晚餐(若較趕的話晚餐買去車上吃)' },
-            { dateIndex: 4, startTime: '20:30', name: '轉點東京車站', address: '新宿站', category: 'Transport', note: '新宿→東京 搭乘:JR 中央線快速' },
-            { dateIndex: 4, startTime: '21:00', name: '搭去長野', address: '東京站', category: 'Transport', note: '21:04東京Tokyo→ 22:23長野Nagano 搭乘:Kagayaki 519' },
-            { dateIndex: 4, startTime: '住宿', name: '長野住處', address: 'Sotetsu Fresa Inn', category: 'Hotel', note: '善光寺口 步行約 2 分鐘' },
-
-            // 1/20 DAY-6
-            { dateIndex: 5, startTime: '8:00', name: '飯店出發租車', address: 'Toyota Rent-A-Car', category: 'Transport', note: '走路15分鐘\n租車注意事項' },
-            { dateIndex: 5, startTime: '8:40', name: '自駕至栂池高原滑雪場', address: '栂池高原滑雪場', category: 'Sightseeing', note: '日間滑雪 08:00 至 17:00' },
-            { dateIndex: 5, startTime: '晚餐', name: '尚未決定', address: '地點尚未決定', category: 'Food', note: '決定好在打上來' },
-            { dateIndex: 5, startTime: '住宿', name: '長野住處', address: 'Sotetsu Fresa Inn', category: 'Hotel', note: '善光寺口 步行約 2 分鐘' },
-
-            // 1/21 DAY-7
-            { dateIndex: 6, startTime: '8:00', name: '自駕至栂池高原滑雪場', address: '栂池高原滑雪場', category: 'Sightseeing', note: '日間滑雪 08:00 至 17:00' },
-            { dateIndex: 6, startTime: '午餐', name: '尚未決定', address: '栂池高原滑雪場', category: 'Food', note: '決定好在打上來' },
-            { dateIndex: 6, startTime: '20:00', name: '還車', address: 'Toyota Rent-A-Car', category: 'Transport', note: '要記得加滿油' },
-            { dateIndex: 6, startTime: '晚餐', name: '尚未決定', address: '地點尚未決定', category: 'Food', note: '決定好在打上來' },
-            { dateIndex: 6, startTime: '住宿', name: '長野住處', address: 'Sotetsu Fresa Inn', category: 'Hotel', note: '善光寺口 步行約 2 分鐘\n今天要整理行李' },
-
-            // 1/22 DAY-8
-            { dateIndex: 7, startTime: '9:00', name: 'JR長野搭車', address: 'JR長野站', category: 'Transport', note: '09:17長野Nagano→10:31上野Ueno 搭乘:Kagayaki 504' },
-            { dateIndex: 7, startTime: '10:45', name: '日暮里轉乘', address: 'JR上野', category: 'Transport', note: '10:47 JR上野Ueno→ 10:50 JR日暮里Nippori' },
-            { dateIndex: 7, startTime: '11:05', name: '前往成田機場', address: 'JR日暮里', category: 'Transport', note: '日暮里Nippori → 成田機場 搭乘:Skyliner\n領票處：日暮里站 Skyliner 專用窗口' },
-            { dateIndex: 7, startTime: '12:30', name: '成田機場逛伴手禮', address: '成田機場', category: 'Shopping', note: '預計13:30過海關' },
-            { dateIndex: 7, startTime: '住宿', name: '平安回國', address: '台北', category: 'Hotel', note: '整理行李' },
-            { dateIndex: 7, startTime: '15:30', name: '搭乘國泰航空', address: '東京機場', category: 'Flight', note: '15:30-18:40\n東京二航→ 台北一航\n國泰CX451 波音 777-300' }
+            { dateIndex: 0, startTime: '11:15', name: '搭乘國泰航空', address: '桃園機場', category: 'Flight', note: '台北一航→大阪一航' },
+            { dateIndex: 0, startTime: '16:00', name: '出海關 & 領票', address: '關西機場', category: 'Package', note: '領取 JR Pass 與 1/18 車票' },
+            { dateIndex: 0, startTime: '16:30', name: '搭乘 HARUKA', address: '機場 JR 月台', category: 'Transport', note: '自由席 | 使用關西周遊券' },
+            { dateIndex: 0, startTime: '晚餐', name: '預計燒肉肉五郎', address: '肉五郎', category: 'Food', note: '營業時間 11:00-23:00' },
+            { dateIndex: 1, startTime: '07:40', name: '抵達環球', address: 'USJ', category: 'Star', note: '衝馬力歐！下載App搶整理券' },
+            { dateIndex: 2, startTime: '09:00', name: '奈良餵鹿', address: '奈良公園', category: 'Sightseeing', note: '預計 10:30 結束' },
+            { dateIndex: 2, startTime: '19:00', name: '六角ACE', address: '六角ACE', category: 'Utensils', note: '✩—aceのポテサラ 580円' },
+            { dateIndex: 3, startTime: '08:30', name: '移動至東京', address: '新大阪站', category: 'Transport', note: '搭乘新幹線 Nozomi' },
+            { dateIndex: 4, startTime: '07:15', name: '富士山之旅', address: '新宿巴士總站', category: 'Transport', note: '高速巴士 1101 班次' },
+            { dateIndex: 4, startTime: '21:04', name: '前往長野', address: '東京站', category: 'Transport', note: '新幹線移動' },
+            { dateIndex: 5, startTime: '08:00', name: '滑雪 Day-1', address: '栂池高原', category: 'Sightseeing', note: '租車出發' },
+            { dateIndex: 6, startTime: '08:00', name: '滑雪 Day-2', address: '栂池高原', category: 'Sightseeing', note: '滑雪挑戰' },
+            { dateIndex: 7, startTime: '09:17', name: '返回東京', address: '長野站', category: 'Transport', note: 'Kagayaki 504' },
+            { dateIndex: 7, startTime: '11:05', name: '前往機場', address: 'JR 日暮里', category: 'Transport', note: 'Skyliner 機場快線' },
+            { dateIndex: 7, startTime: '15:30', name: '搭機返台', address: '成田機場', category: 'Flight', note: '回程 CX451' }
         ];
 
-        const couponData = [
-            { id: 'donki_vFinal', name: '唐吉訶德 Donki', discount: '10% 免稅 + 5% 折扣', img: 'https://lh3.googleusercontent.com/d/1GLEnLyxPei2-k0ST3i6JX9xwnPxfvHVH', externalLink: 'https://japanportal.donki-global.com/coupon/cp001_zhtw.html', type: 'Coupon' }
+        // 住宿資料定義
+        const staysData = [
+            { name: 'Hotel Vischio Osaka', period: '1/15 - 1/18 (3晚)', checkIn: '15:00', checkOut: '11:00', distance: 'JR 大阪站徒步 5 分', note: '梅田精華區，樓下有超商，交通極便' },
+            { name: 'Tokyo Shinjuku Hotel', period: '1/18 - 1/19 (1晚)', checkIn: '15:00', checkOut: '10:00', distance: '新宿站徒步 8 分', note: '方便隔天清晨前往新宿巴士總站' },
+            { name: 'Nagano Hakuba Lodge', period: '1/19 - 1/22 (3晚)', checkIn: '15:00', checkOut: '10:00', distance: '栂池滑雪場接駁車 5 分', note: '含早晚餐，滑雪裝備可存放於 B1' }
         ];
 
-        // 修正後的藥妝與美妝資料連結 (lh3.googleusercontent.com 直連)
         const drugstoreMasterData = [
-            // 藥妝
-            { id: 'p1_vitc', name: '武田製藥 維他命C錠 (300錠)', category: '藥妝', img: 'https://lh3.googleusercontent.com/d/1XzQ0ob4I9EvhvrmRWXz1YEbHhJqVkRBs', intro: '補充C與鈣質，緩解疲勞淡化斑點', price: '¥3,000', store: '松本清、Sun Drug、Aeon', purchased: false, type: 'Product' },
-            { id: 'p2_repair', name: '第一三共 Oivalux PZ 修復乳膏 (10g)', category: '藥妝', img: 'https://lh3.googleusercontent.com/d/1oUmOZHN_mmsOGcSyWsCntw-RjDboDuL9', intro: '快速止癢抗炎，修復濕疹與皮膚炎症狀', price: '¥2,000', store: '松本清、Cocokara Fine、Sun Drug', purchased: false, type: 'Product' },
-            { id: 'p3_patch', name: '小林退熱貼', category: '藥妝', img: 'https://lh3.googleusercontent.com/d/1gzHSDr1XnQV7Zl3KTDR_NGthysTnqaQI', intro: '瞬間降溫散熱，緩解發燒不適', price: '¥500', store: 'Sun Drug、松本清、各大藥妝店', purchased: false, type: 'Product' },
-            // 美妝
-            { id: 'bz1', name: 'TAKAMI 角質道小藍瓶 30ml', category: '美妝', img: 'https://lh3.googleusercontent.com/d/1iQaypfEWu7Epb15xOiL7KfuvEAYMuhdg', intro: '溫和代謝角質，肌膚透亮滑嫩', price: '¥5,500', store: 'Loft、@cosme TOKYO、伊勢丹', purchased: false, type: 'Product' },
-            { id: 'bz2', name: 'TOKIO IE INKARAMI PLATINUM (京喚羽銀系列)', category: '美妝', img: 'https://lh3.googleusercontent.com/d/1xgrQ2oGVrmyL4ILz5-LjVPJvQt3t1xA-', intro: '獨家技術修護受損，打造輕盈水潤髮', price: '¥5,160', store: '唐吉訶德、Loft、Tokyu Hands', purchased: false, type: 'Product', note: '銀色(Platinum):適合大多數髮質。金色(Premium):保濕力更強。' },
-            { id: 'bz3', name: 'KISSME 花漾美姬 睫毛精華液 EX', category: '美妝', img: 'https://lh3.googleusercontent.com/d/1nXqvRFGlYX4tKawzQMOgmI_v6EqmhEkT', intro: '27種精華液成分，強韌滋養睫毛', price: '¥1,300', store: '松本清、Loft、Plaza', purchased: false, type: 'Product' },
-            { id: 'bz4', name: 'Melano CC 毛孔清透酵素潔面乳', category: '美妝', img: 'https://lh3.googleusercontent.com/d/10BcW1FLuMXCxprOaNuCXBEURHAa39OrA', intro: '酵素深入清潔毛孔，洗後清爽亮白', price: '¥700', store: '唐吉訶德、松本清、各大藥妝店', purchased: false, type: 'Product' },
-            { id: 'bz5', name: 'd program 敏感話題潔膚乳N', category: '美妝', img: 'https://lh3.googleusercontent.com/d/1E4D8_GvX5_DJ88Q9fwKAk5CTE4-EKxLy', intro: '專為敏感肌設計，洗後溫和不乾澀', price: '¥2,800', store: '松本清、松屋、各大藥妝店', purchased: false, type: 'Product' }
+            { id: 'p1_vitc', name: '武田製藥 維他命C錠 (300錠)', category: '藥妝', img: 'https://lh3.googleusercontent.com/d/1XzQ0ob4I9EvhvrmRWXz1YEbHhJqVkRBs', intro: '補充C與鈣質，緩解疲勞', price: '¥3,000', store: '松本清、Aeon', purchased: false, type: 'Product' },
+            { id: 'p2_repair', name: '第一三共 Oivalux PZ 修復乳膏', category: '藥妝', img: 'https://lh3.googleusercontent.com/d/1oUmOZHN_mmsOGcSyWsCntw-RjDboDuL9', intro: '止癢抗炎，修復皮膚炎', price: '¥2,000', store: '松本清、Sun Drug', purchased: false, type: 'Product' },
+            { id: 'p3_patch', name: '小林退熱貼', category: '藥妝', img: 'https://lh3.googleusercontent.com/d/1gzHSDr1XnQV7Zl3KTDR_NGthysTnqaQI', intro: '瞬間降溫散熱', price: '¥500', store: '各大藥妝店', purchased: false, type: 'Product' },
+            { id: 'bz1', name: 'TAKAMI 角質道小藍瓶 30ml', category: '美妝', img: 'https://lh3.googleusercontent.com/d/1iQaypfEWu7Epb15xOiL7KfuvEAYMuhdg', intro: '溫和代謝角質', price: '¥5,500', store: 'Loft、@cosme', purchased: false, type: 'Product' },
+            { id: 'bz2', name: 'TOKIO IE 銀系列 (京喚羽)', category: '美妝', img: 'https://lh3.googleusercontent.com/d/1xgrQ2oGVrmyL4ILz5-LjVPJvQt3t1xA-', intro: '修護受損，輕盈水潤', price: '¥5,160', store: '唐吉訶德', purchased: false, type: 'Product' },
+            { id: 'bz3', name: 'KISSME 花漾美姬 睫毛精華液 EX', category: '美妝', img: 'https://lh3.googleusercontent.com/d/1nXqvRFGlYX4tKawzQMOgmI_v6EqmhEkT', intro: '強韌睫毛滋養', price: '¥1,300', store: '松本清', purchased: false, type: 'Product' },
+            { id: 'bz4', name: 'Melano CC 酵素潔面乳', category: '美妝', img: 'https://lh3.googleusercontent.com/d/10BcW1FLuMXCxprOaNuCXBEURHAa39OrA', intro: '清潔毛孔', price: '¥700', store: '唐吉訶德', purchased: false, type: 'Product' },
+            { id: 'bz5', name: 'd program 敏感話題潔膚乳N', category: '美妝', img: 'https://lh3.googleusercontent.com/d/1E4D8_GvX5_DJ88Q9fwKAk5CTE4-EKxLy', intro: '敏感肌專用', price: '¥2,800', store: '各大藥妝店', purchased: false, type: 'Product' },
+            { id: 'f1_spice', name: 'ほりにし (Horinishi) 全能香料', category: '食', img: 'https://lh3.googleusercontent.com/d/1w85IBpOkUecKW0UGKpKiolCopIcG9QHC', intro: '蒜味濃郁', price: '¥900', store: '成城石井', purchased: false, type: 'Product' },
+            { id: 'f2_soy', name: '牡蠣高湯醬油', category: '食', img: 'https://lh3.googleusercontent.com/d/1SPKVZ43kGDi8F83dloMJUpDgPUZEe-Lq', intro: '甘鮮牡蠣萃取', price: '¥450', store: '各大超市', purchased: false, type: 'Product' },
+            { id: 'f3_chicken', name: '博多華味鳥 極香料', category: '食', img: 'https://lh3.googleusercontent.com/d/1ZO4g64JXWyxQ3jxQ2NVvGVgEwHjd0oWJ', intro: '名店監製', price: '¥600', store: 'Life超市', purchased: false, type: 'Product' },
+            { id: 'muji1', name: '無印良品 睡眠噴霧 (Sleeping Blend)', category: '其他', img: 'https://lh3.googleusercontent.com/d/1jXMhO_l6vTbBkqObVy75ohIxERYm9Lm1', intro: '助眠放鬆氣息', price: '¥1,700', store: '日本無印良品', purchased: false, type: 'Product' },
+            { id: 'muji2', name: '不鏽鋼削皮刀', category: '其他', img: 'https://lh3.googleusercontent.com/d/1elsHjWgujGwgUPGBsegUlm5yEWRsHM4r', intro: '不鏽鋼耐磨好洗', price: '¥900', store: '日本無印良品專門店', purchased: false, type: 'Product' }
         ];
 
-        const accIcons = { '美食': '🥞', '交通': '🚃', '超商': '🍙', '票券': '🎟️', '其他': '🎀', '基金': '🏦', '罰款': '⚖️' };
+        const accIconsMap = { '美食': '🥞', '交通': '🚃', '超商': '🍙', '票券': '🎟️', '其他': '🎀', '基金': '🏦', '罰款': '⚖️' };
 
         // --- 3. App 主組件 ---
 
@@ -256,14 +280,17 @@
             const [selectedOverlay, setSelectedOverlay] = useState(null);
             const [showCouponsView, setShowCouponsView] = useState(false);
             
-            // 資料持久化 Key
-            const STORAGE_EXP = 'japan_trip_vFinal_expenses_fixed_vFinal';
-            const STORAGE_SHOP = 'japan_trip_vFinal_shopping_fixed_vFinal';
+            const STORAGE_EXP = 'japan_trip_exp_vFinal_v202';
+            const STORAGE_SHOP = 'japan_trip_shop_FINAL_ULTIMATE_V5';
 
             const [expenses, setExpenses] = useState(() => JSON.parse(localStorage.getItem(STORAGE_EXP) || '[]'));
             const [shoppingItems, setShoppingItems] = useState(() => {
                 const saved = localStorage.getItem(STORAGE_SHOP);
-                return saved ? JSON.parse(saved) : drugstoreMasterData;
+                if (!saved) return drugstoreMasterData;
+                const items = JSON.parse(saved);
+                const combined = [...items];
+                drugstoreMasterData.forEach(d => { if (!combined.some(c => c.id === d.id)) combined.push(d); });
+                return combined;
             });
 
             useEffect(() => { localStorage.setItem(STORAGE_EXP, JSON.stringify(expenses)); }, [expenses]);
@@ -288,8 +315,8 @@
                 setStartX(e.pageX - scrollRef.current.offsetLeft);
                 setScrollLeft(scrollRef.current.scrollLeft);
             };
-            const handleMouseLeave = () => { setIsDragging(false); };
-            const handleMouseUp = () => { setIsDragging(false); };
+            const handleMouseLeave = () => setIsDragging(false);
+            const handleMouseUp = () => setIsDragging(false);
             const handleMouseMove = (e) => {
                 if (!isDragging || !scrollRef.current) return;
                 e.preventDefault();
@@ -315,18 +342,10 @@
             const handleAddShopItem = (e) => {
                 e.preventDefault();
                 if (!newShopItemName.trim()) return;
-                const newItem = { id: Date.now(), name: newShopItemName, category: activeShopCategory, travelerId: activeTraveler.id, purchased: false, type: 'Product', intro: '手動新增', price: '待定', store: '待定', createdAt: new Date().toISOString() };
+                const newItem = { id: Date.now(), name: newShopItemName, category: activeShopCategory, travelerId: activeTraveler.id, purchased: false, type: 'Product', intro: '手動新增', price: '待定', store: '地點未定', createdAt: new Date().toISOString() };
                 setShoppingItems([...shoppingItems, newItem]);
                 setNewShopItemName('');
             };
-
-            const financeStats = (() => {
-                const dayEntries = expenses.filter(e => e.date === selectedAccDate);
-                const inc = dayEntries.filter(e => e.type === 'income').reduce((s, e) => s + Number(e.amount), 0);
-                const exp = dayEntries.filter(e => e.type === 'expense').reduce((s, e) => s + Number(e.amount), 0);
-                let cumulative = expenses.reduce((s, e) => s + (e.type === 'income' ? Number(e.amount) : -Number(e.amount)), 0);
-                return { inc, exp, cumulative };
-            })();
 
             const sortedDayTrips = (dayItems) => {
                 return [...dayItems].sort((a, b) => {
@@ -344,14 +363,26 @@
                 });
             };
 
+            const financeStats = (() => {
+                const dayEntries = expenses.filter(e => e.date === selectedAccDate);
+                const inc = dayEntries.filter(e => e.type === 'income').reduce((s, e) => s + Number(e.amount), 0);
+                const exp = dayEntries.filter(e => e.type === 'expense').reduce((s, e) => s + Number(e.amount), 0);
+                let cumulative = expenses.reduce((s, e) => s + (e.type === 'income' ? Number(e.amount) : -Number(e.amount)), 0);
+                return { inc, exp, cumulative };
+            })();
+
+            const couponData = [
+                { id: 'donki_main', name: '唐吉訶德 Donki', discount: '10% 免稅 + 5% 折扣', img: 'https://lh3.googleusercontent.com/d/1GLEnLyxPei2-k0ST3i6JX9xwnPxfvHVH', externalLink: 'https://japanportal.donki-global.com/coupon/cp001_zhtw.html', type: 'Coupon' }
+            ];
+
             return (
                 <div className="flex justify-center bg-[#DED9CE] min-h-screen font-sans selection:bg-[#5D4037]/10 text-[#4A3728]">
                     <div className="w-full max-w-[390px] min-h-screen bg-[#F5F2E9] shadow-2xl relative overflow-hidden flex flex-col grain-overlay">
                         <div className="absolute inset-0 pointer-events-none opacity-[0.02] dot-grid z-0"></div>
 
                         <div className="flex-1 overflow-y-auto no-scrollbar relative z-10 content-padding">
-                            <header className="pt-8 pb-4 px-6 shrink-0 border-b border-[#EAE3D2]/50">
-                                <div className="flex justify-between items-center text-[#4A3728]">
+                            <header className="pt-8 pb-4 px-6 shrink-0 border-b border-[#EAE3D2]/50 text-[#4A3728]">
+                                <div className="flex justify-between items-center">
                                     <h1 className="text-2xl font-bold tracking-tighter leading-none">日本旅行手記</h1>
                                     <div className="flex gap-1.5">
                                         {travelers.map(t => (
@@ -371,7 +402,7 @@
                             </header>
 
                             <main className="px-5 pt-2 animate-fade-in text-[#4A3728]">
-                                {/* 1. 行程 */}
+                                {/* 1. 行程分頁 */}
                                 {currentTab === 'itinerary' && (
                                     <div className="space-y-3 pt-2">
                                         {dates.map((d, i) => {
@@ -380,8 +411,8 @@
                                                 <div key={i} className="bg-white border rounded-xl shadow-sm overflow-hidden border-[#EAE3D2]">
                                                     <button onClick={() => setExpandedDateIndex(isExpanded ? null : i)} className="w-full p-3.5 flex items-center gap-4 text-left active:bg-stone-50 transition-all text-[#4A3728]">
                                                         <div className={`w-11 h-11 bg-[#5D4037] flex flex-col items-center justify-center rounded-lg shadow-sm shrink-0`}>
-                                                            <span className="text-[7px] font-black text-white/50 uppercase leading-none mb-1 text-white">{d.weekday}</span>
-                                                            <span className="text-base font-bold text-white tracking-tighter text-white">{d.date.split('/')[1]}</span>
+                                                            <span className="text-[7px] font-black text-white/50 uppercase leading-none mb-1">{d.weekday}</span>
+                                                            <span className="text-base font-bold text-white tracking-tighter">{d.date.split('/')[1]}</span>
                                                         </div>
                                                         <div className="flex-1 font-bold text-[13px]">{d.title}</div>
                                                         <WeatherDisplay lat={d.loc.lat} lon={d.loc.lon} />
@@ -391,11 +422,11 @@
                                                         <div className="px-5 pb-5 space-y-4 border-t pt-4 animate-fade-in">
                                                             {sortedDayTrips(fullItineraryData.filter(t => t.dateIndex === i)).map((trip, idx) => (
                                                                 <div key={idx} className="flex gap-4">
-                                                                    <span className="text-[9px] font-black py-1 h-5 min-w-[38px] bg-[#FAF9F6] border border-[#EAE3D2] text-center rounded shadow-xs text-[#4A3728]">{trip.startTime}</span>
+                                                                    <span className="text-[9px] font-black py-1 h-5 min-w-[38px] bg-[#FAF9F6] border border-[#EAE3D2] text-center rounded shadow-xs">{trip.startTime}</span>
                                                                     <div className="flex-1">
                                                                         <div className="flex items-center gap-2 mb-1"><Icon name={trip.category || "Star"} size={12} className="text-[#D6C5A0]" /><p className="text-[11px] font-bold">{trip.name}</p></div>
-                                                                        <p className="text-[8px] opacity-40 uppercase truncate font-black tracking-tight text-[#4A3728]"><Icon name="MapPin" size={7}/> {trip.address}</p>
-                                                                        {trip.note && <p className="text-[10px] text-[#8E7D6A] bg-[#FAF9F6] p-2 border-l-2 border-[#D6C5A0] mt-2 whitespace-pre-wrap leading-relaxed shadow-inner font-medium text-[#8E7D6A]">{trip.note}</p>}
+                                                                        <p className="text-[8px] opacity-40 uppercase truncate font-black tracking-tight"><Icon name="MapPin" size={7}/> {trip.address}</p>
+                                                                        {trip.note && <p className="text-[10px] text-[#8E7D6A] bg-[#FAF9F6] p-2 border-l-2 border-[#D6C5A0] mt-2 whitespace-pre-wrap leading-relaxed shadow-inner font-medium">⚠️ {trip.note}</p>}
                                                                     </div>
                                                                 </div>
                                                             ))}
@@ -407,27 +438,27 @@
                                     </div>
                                 )}
 
-                                {/* 2. 票券 */}
+                                {/* 2. 票券分頁 */}
                                 {currentTab === 'tickets' && (
                                     <div className="space-y-4 pb-10 px-1 pt-2 animate-fade-in text-[#4A3728]">
                                         {ticketsData.map((tk, i) => {
                                             const my = tk.assignments ? tk.assignments[activeTraveler.id] : null;
                                             const isFlight = tk.type === 'Flight';
                                             return (
-                                                <button key={i} onClick={() => setSelectedOverlay({ ...tk, currentUserData: my })} className="w-full text-left active:scale-[0.98] transition-all">
+                                                <button key={i} onClick={() => setSelectedOverlay({ ...tk, currentUserData: my })} className="w-full text-left active:scale-[0.98] transition-all text-[#4A3728]">
                                                     <div className={`bg-white border shadow-xl rounded-2xl overflow-hidden relative ${isFlight ? 'pt-0 border-[#5D4037]/20' : 'p-5 border-[#EAE3D2]'}`}>
                                                         {isFlight ? (
                                                             <>
-                                                                <div className="bg-[#5D4037] p-3 text-white flex justify-between items-center text-[8px] font-bold uppercase tracking-widest text-white">
-                                                                    <div className="flex items-center gap-2 text-white"><Icon name="Plane" size={10}/> Boarding Pass</div>
-                                                                    <span>Cathay Pacific</span>
+                                                                <div className="bg-[#5D4037] p-3 text-white flex justify-between items-center text-[8px] font-bold uppercase tracking-widest">
+                                                                    <div className="flex items-center gap-2"><Icon name="Plane" size={10}/> Boarding Pass</div>
+                                                                    <span className="text-[10px]">Cathay Pacific</span>
                                                                 </div>
-                                                                <div className="p-5 text-[#4A3728]">
-                                                                    <div className="flex justify-between items-end mb-4 text-[#4A3728]">
+                                                                <div className="p-5">
+                                                                    <div className="flex justify-between items-end mb-4">
                                                                         <div><p className="text-[7px] font-black opacity-30 uppercase tracking-widest text-[#A69076]">Passenger</p><p className="text-sm font-black">{activeTraveler.name}</p></div>
-                                                                        <div className="text-right text-[9px] font-bold"><p className="text-[7px] font-black opacity-30 text-[#A69076]">Seat</p><p className="text-sm font-black text-[#5D4037]">{my?.seat || '待定'} <span className="text-[#A69076] font-black ml-1 text-base leading-none text-[#5D4037]">︙</span></p></div>
+                                                                        <div className="text-right"><p className="text-[7px] font-black opacity-30 text-[#A69076]">Seat</p><p className="text-sm font-black text-[#5D4037]">{my?.seat || '待定'} <span className="text-[#A69076] font-black ml-1 text-base leading-none text-[#5D4037]">︙</span></p></div>
                                                                     </div>
-                                                                    <h3 className="text-[12px] font-bold border-b pb-3 mb-3 text-[#4A3728]">{tk.title}</h3>
+                                                                    <h3 className="text-[12px] font-bold border-b pb-2 mb-2">{tk.title}</h3>
                                                                     <div className="flex justify-between items-center text-[9px] font-bold text-[#A69076]">
                                                                         <p>{tk.date}</p>
                                                                         <Icon name="QrCode" size={14} className="opacity-40" />
@@ -435,7 +466,7 @@
                                                                 </div>
                                                             </>
                                                         ) : (
-                                                            <div className="text-[#4A3728]">
+                                                            <div>
                                                                 <div className="flex justify-between items-start mb-2">
                                                                     <span className={`text-[7px] font-black uppercase px-2 py-0.5 rounded-sm bg-[#5D4037] text-white`}>{tk.type}</span>
                                                                     <span className="text-[9px] font-bold text-[#A69076]">{tk.date}</span>
@@ -443,7 +474,7 @@
                                                                 <p className="text-[13px] font-bold mb-1 leading-tight">{tk.title}</p>
                                                                 <div className="mt-4 flex justify-between items-end border-t border-dashed border-[#F3EFE0] pt-3 text-[#A69076]">
                                                                     <p className="text-[10px] font-black text-[#8B5E3C]">{activeTraveler.name} 專屬 {my?.seat ? ` | ${my.seat}` : ''}</p>
-                                                                    <span className="text-xl font-black text-[#5D4037] opacity-60 text-[#5D4037]">︙</span>
+                                                                    <span className="text-xl font-black text-[#5D4037] opacity-60">︙</span>
                                                                 </div>
                                                             </div>
                                                         )}
@@ -457,60 +488,52 @@
                                 {/* 3. 記帳分頁 */}
                                 {currentTab === 'expenses' && (
                                     <div className="space-y-4 pb-12 px-1 pt-2 animate-fade-in text-[#4A3728]">
-                                        <div 
-                                            ref={scrollRef}
-                                            onMouseDown={handleMouseDown}
-                                            onMouseLeave={handleMouseLeave}
-                                            onMouseUp={handleMouseUp}
-                                            onMouseMove={handleMouseMove}
-                                            className={`flex flex-nowrap gap-2 overflow-x-auto no-scrollbar pb-3 px-1 w-full text-[#4A3728] ${isDragging ? 'cursor-grabbing' : 'cursor-grab'} select-none active:cursor-grabbing`}
-                                            style={{ WebkitOverflowScrolling: 'touch' }}
-                                        >
+                                        <div ref={scrollRef} onMouseDown={handleMouseDown} onMouseLeave={handleMouseLeave} onMouseUp={handleMouseUp} onMouseMove={handleMouseMove} className={`flex flex-nowrap gap-2 overflow-x-auto no-scrollbar pb-3 px-1 w-full text-[#4A3728] ${isDragging ? 'cursor-grabbing' : 'cursor-grab'} select-none active:cursor-grabbing`} style={{ WebkitOverflowScrolling: 'touch' }}>
                                             {dates.map(d => (
                                                 <button key={d.date} onClick={() => setSelectedAccDate(d.date)} className={`shrink-0 flex flex-col items-center justify-center w-14 h-16 rounded-2xl border transition-all duration-300 ${selectedAccDate === d.date ? 'bg-[#5D4037] text-white shadow-lg scale-105 border-[#5D4037]' : 'bg-white text-[#8E7D6A] border-[#EAE3D2]'}`}>
                                                     <span className="text-[6px] font-black uppercase opacity-60">{d.weekday}</span>
-                                                    <span className="text-sm font-bold tracking-tighter">{d.date.split('/')[1]}</span>
+                                                    <span className="text-sm font-bold tracking-tighter text-opacity-100">{d.date.split('/')[1]}</span>
                                                 </button>
                                             ))}
                                         </div>
                                         <div className="bg-[#5D4037] p-6 rounded-[2.5rem] shadow-xl text-white text-center border border-white/5">
-                                            <p className="text-[7px] font-black uppercase tracking-[0.4em] opacity-40 mb-1 text-center text-white text-opacity-70 text-white">Cumulative Balance (¥)</p>
-                                            <h2 className="text-4xl font-bold tracking-tighter mb-6 text-white text-white text-opacity-95">¥{financeStats.cumulative.toLocaleString()}</h2>
+                                            <p className="text-[7px] font-black uppercase tracking-[0.4em] opacity-40 mb-1 text-center">Cumulative Balance (¥)</p>
+                                            <h2 className="text-4xl font-bold tracking-tighter mb-6 text-opacity-95">¥{financeStats.cumulative.toLocaleString()}</h2>
                                             <div className="grid grid-cols-2 gap-4 border-t border-white/10 pt-4 px-2">
-                                                <div className="text-left text-[#F5F2E9] text-white"><p className="text-[7px] opacity-40 uppercase mb-1 font-black text-white text-opacity-50 text-white">Today Inc.</p><p className="text-sm font-bold text-green-300">¥{financeStats.inc.toLocaleString()}</p></div>
-                                                <div className="text-right border-l border-white/10 pl-4 text-stone-300 text-white"><p className="text-[7px] opacity-40 uppercase mb-1 font-black text-white text-opacity-50 text-white text-white">Today Exp.</p><p className="text-sm font-bold text-red-300 text-white">¥{financeStats.exp.toLocaleString()}</p></div>
+                                                <div className="text-left text-[#F5F2E9] text-opacity-80"><p className="text-[7px] opacity-40 uppercase mb-1 font-black text-white">Today Inc.</p><p className="text-sm font-bold text-green-300">¥{financeStats.inc.toLocaleString()}</p></div>
+                                                <div className="text-right border-l border-white/10 pl-4 text-stone-300 text-opacity-80"><p className="text-[7px] opacity-40 uppercase mb-1 font-black text-white text-opacity-50">Today Exp.</p><p className="text-sm font-bold text-red-300">¥{financeStats.exp.toLocaleString()}</p></div>
                                             </div>
                                         </div>
                                         <div className="bg-white border p-5 rounded-[2rem] shadow-sm text-[#4A3728] border-[#EAE3D2]">
-                                            <div className="flex gap-2 mb-4 bg-[#F3EFE0] p-1 rounded-xl text-[#4A3728]">
+                                            <div className="flex gap-2 mb-4 bg-[#F3EFE0] p-1 rounded-xl">
                                                 <button onClick={() => setExpType('expense')} className={`flex-1 py-1.5 text-[9px] font-black rounded-lg transition-all ${expType === 'expense' ? 'bg-[#5D4037] text-white shadow-md' : ''}`}>支出</button>
                                                 <button onClick={() => setExpType('income')} className={`flex-1 py-1.5 text-[9px] font-black rounded-lg transition-all ${expType === 'income' ? 'bg-[#D6C5A0] text-[#4A3728] shadow-md' : ''}`}>收入</button>
                                             </div>
                                             <div className="grid grid-cols-4 gap-2 mb-5">
-                                               {Object.keys(accIcons).filter(k => expType === 'income' ? (k === '基金' || k === '罰款') : (k !== '基金' && k !== '罰款')).map(cat => (
+                                               {Object.keys(accIconsMap).filter(k => expType === 'income' ? (k === '基金' || k === '罰款') : (k !== '基金' && k !== '罰款')).map(cat => (
                                                   <button key={cat} onClick={() => setExpCategory(cat)} className={`flex flex-col items-center gap-1.5 py-2 rounded-xl border transition-all ${expCategory === cat ? 'bg-[#F5F2E9] border-[#5D4037] text-[#5D4037]' : 'bg-white border-[#EEEAE0] text-[#A69076] opacity-60'}`}>
-                                                     <span className="text-lg">{accIcons[cat]}</span><span className="text-[8px] font-black">{cat}</span>
+                                                     <span className="text-lg">{accIconsMap[cat]}</span><span className="text-[8px] font-black">{cat}</span>
                                                   </button>
                                                ))}
                                             </div>
-                                            <form onSubmit={handleAddExpense} className="space-y-4 text-[#4A3728]">
-                                                <input value={expRawAmount} onChange={e => setExpRawAmount(e.target.value)} placeholder="金額 (支援 100+50)..." className="w-full bg-[#FAF9F6] border border-[#EAE3D2] rounded-xl text-[11px] px-4 py-3.5 outline-none focus:border-[#5D4037] font-mono shadow-inner text-[#4A3728]" />
-                                                <div className="flex gap-2 text-[#4A3728]">
-                                                    <input value={expDesc} onChange={e => setExpDesc(e.target.value)} placeholder="備註..." className="flex-1 bg-[#FAF9F6] border border-[#EAE3D2] rounded-xl text-[11px] px-4 py-3.5 outline-none focus:border-[#5D4037] shadow-inner text-[#4A3728]" />
-                                                    <button type="submit" className="bg-[#5D4037] text-white px-5 rounded-xl shadow-lg active:scale-95 transition-all text-white font-bold text-lg text-white">✢</button>
+                                            <form onSubmit={handleAddExpense} className="space-y-4">
+                                                <input value={expRawAmount} onChange={e => setExpRawAmount(e.target.value)} placeholder="金額 (支援 100+50)..." className="w-full bg-[#FAF9F6] border border-[#EAE3D2] rounded-xl text-[11px] px-4 py-3 outline-none focus:border-[#5D4037] font-mono shadow-inner text-[#4A3728]" />
+                                                <div className="flex gap-2">
+                                                    <input value={expDesc} onChange={e => setExpDesc(e.target.value)} placeholder="備註..." className="flex-1 bg-[#FAF9F6] border border-[#EAE3D2] rounded-xl text-[11px] px-4 py-3 outline-none focus:border-[#5D4037] shadow-inner text-[#4A3728]" />
+                                                    <button type="submit" className="bg-[#5D4037] text-white px-5 rounded-xl shadow-lg active:scale-95 transition-all text-white font-bold text-lg">✢</button>
                                                 </div>
                                             </form>
                                         </div>
-                                        <div className="space-y-2 mt-4 text-[#4A3728]">
-                                            {expenses.filter(e => e.date === selectedAccDate).map((exp) => (
-                                                <div key={exp.id} className="flex items-center justify-between bg-white p-4 rounded-2xl shadow-xs border border-stone-100 group animate-fade-in text-[#4A3728]">
-                                                    <div className="flex items-center gap-3 text-[#4A3728]">
+                                        <div className="space-y-2 mt-4">
+                                            {expenses.filter(e => e.date === selectedAccDate).sort((a,b) => b.id - a.id).map((exp) => (
+                                                <div key={exp.id} className="flex items-center justify-between bg-white p-4 rounded-2xl shadow-xs border border-stone-100 group animate-fade-in">
+                                                    <div className="flex items-center gap-3">
                                                         <div className={`w-9 h-9 rounded-full flex items-center justify-center bg-red-50 text-lg`}>💰</div>
-                                                        <div><p className="text-[12px] font-bold text-[#4A3728] text-opacity-95">{exp.description}</p><p className="text-[8px] font-bold text-[#A69076] mt-0.5 uppercase tracking-tighter text-[#A69076]">{exp.payer} • {exp.category}</p></div>
+                                                        <div><p className="text-[12px] font-bold text-[#4A3728] text-opacity-95">{exp.description}</p><p className="text-[8px] font-bold text-[#A69076] mt-0.5 uppercase tracking-tighter">{exp.payer} • {exp.category}</p></div>
                                                     </div>
-                                                    <div className="flex items-center gap-4 text-[#4A3728]">
+                                                    <div className="flex items-center gap-4">
                                                        <span className={`text-[13px] font-black text-[#5D4037]`}>¥{exp.amount.toLocaleString()}</span>
-                                                       <button onClick={() => deleteExpense(exp.id)} className="p-2 text-[#8B5E3C] opacity-20 hover:opacity-100 active:scale-90 transition-all font-bold text-lg text-[#8B5E3C]">✘</button>
+                                                       <button onClick={() => deleteExpense(exp.id)} className="p-2 text-[#8B5E3C] opacity-20 hover:opacity-100 active:scale-90 transition-all font-bold text-lg">✘</button>
                                                     </div>
                                                 </div>
                                             ))}
@@ -523,19 +546,19 @@
                                     <div className="space-y-4 pb-10 px-1 pt-2 animate-fade-in text-[#4A3728]">
                                         {staysData.map((h, i) => (
                                             <div key={i} className="bg-white border border-[#EAE3D2] p-5 rounded-2xl shadow-sm text-[#4A3728]">
-                                                <h4 className="font-black text-[13px] flex items-center gap-2 mb-1 uppercase tracking-tight text-[#5D4037] text-opacity-90 text-[#4A3728]"><Icon name="Hotel" size={14} className="text-[#8B5E3C] opacity-80"/> {h.name}</h4>
-                                                <p className="text-[9px] text-[#A68B6A] mb-4 font-bold tracking-widest text-[#A68B6A]">{h.period}</p>
+                                                <h4 className="font-black text-[13px] flex items-center gap-2 mb-1 uppercase tracking-tight text-[#5D4037] text-opacity-90"><Icon name="Hotel" size={14} className="text-[#8B5E3C] opacity-80"/> {h.name}</h4>
+                                                <p className="text-[9px] text-[#A68B6A] mb-4 font-bold tracking-widest">{h.period}</p>
                                                 <div className="grid grid-cols-2 gap-3 mb-4 text-[#A69076]">
-                                                    <div className="bg-[#FAF9F6] p-2 rounded-lg border border-[#EAE3D2] text-center text-[#A69076]">
-                                                        <p className="text-[7px] font-black uppercase mb-1">Check-In</p><p className="text-xs font-black text-[#5D4037] text-center">{h.checkIn}</p>
+                                                    <div className="bg-[#FAF9F6] p-2 rounded-lg border border-[#EAE3D2] text-center">
+                                                        <p className="text-[7px] font-black uppercase mb-1 text-[#A69076]">Check-In</p><p className="text-xs font-black text-[#5D4037] text-center">{h.checkIn}</p>
                                                     </div>
-                                                    <div className="bg-[#FAF9F6] p-2 rounded-lg border border-[#EAE3D2] text-center text-[#A69076]">
-                                                        <p className="text-[7px] font-black uppercase mb-1">Check-Out</p><p className="text-xs font-black text-[#5D4037] text-center">{h.checkOut}</p>
+                                                    <div className="bg-[#FAF9F6] p-2 rounded-lg border border-[#EAE3D2] text-center">
+                                                        <p className="text-[7px] font-black uppercase mb-1 text-[#A69076]">Check-Out</p><p className="text-xs font-black text-[#5D4037] text-center">{h.checkOut}</p>
                                                     </div>
                                                 </div>
-                                                <div className="space-y-2 text-[#4A3728] text-[10px] font-bold text-[#4A3728]">
-                                                    <div className="flex items-center gap-2 opacity-70"><Icon name="Navigation" size={10} className="text-[#8B5E3C] text-[#4A3728]"/> {h.distance}</div>
-                                                    <p className="bg-[#F5F2E9]/50 p-2 rounded border-l-2 border-[#D6C5A0] opacity-70 italic text-[9px] leading-relaxed font-medium text-[#4A3728]">⚠️ {h.note}</p>
+                                                <div className="space-y-2 text-[10px] font-bold">
+                                                    <div className="flex items-center gap-2 opacity-70"><Icon name="Navigation" size={10} className="text-[#8B5E3C]"/> {h.distance}</div>
+                                                    <p className="bg-[#F5F2E9]/50 p-2 rounded border-l-2 border-[#D6C5A0] opacity-70 italic text-[9px] leading-relaxed font-medium">⚠️ {h.note}</p>
                                                 </div>
                                             </div>
                                         ))}
@@ -546,23 +569,23 @@
                                 {currentTab === 'shopping' && (
                                     <div className="animate-fade-in pt-2 text-[#4A3728]">
                                         <div className="bg-white border border-[#EAE3D2] shadow-sm rounded-3xl min-h-[500px] flex flex-col overflow-hidden text-[#4A3728]">
-                                            <div className="px-4 pt-4 flex justify-between items-center text-[#4A3728]">
+                                            <div className="px-4 pt-4 flex justify-between items-center">
                                                 <button onClick={() => setShowCouponsView(!showCouponsView)} className={`px-3 py-1.5 rounded-full border transition-all flex items-center gap-2 ${showCouponsView ? 'bg-[#5D4037] text-white border-[#5D4037]' : 'bg-[#F5F2E9] border-[#EAE3D2] text-[#8B5E3C]'}`} >
                                                     <Icon name="Tag" size={10} className={showCouponsView ? "text-white" : "text-[#8B5E3C]"} />
                                                     <span className="text-[10px] font-black uppercase tracking-widest">{showCouponsView ? '返回清單' : '優惠券'}</span>
                                                 </button>
                                             </div>
-
+                                            
                                             {showCouponsView ? (
-                                                <div className="p-6 animate-fade-in flex-1 text-[#4A3728]">
-                                                    <h2 className="text-xs font-bold mb-6 tracking-widest uppercase font-black text-[#A69076] border-b pb-2 text-[#A69076]">꒰ 優惠券縮圖 ꒱</h2>
+                                                <div className="p-6 animate-fade-in flex-1">
+                                                    <h2 className="text-xs font-bold mb-6 tracking-widest uppercase font-black text-[#A69076] border-b pb-2">꒰ 優惠券 ꒱</h2>
                                                     <div className="grid grid-cols-2 gap-4">
                                                         {couponData.map(cp => (
                                                             <button key={cp.id} onClick={() => setSelectedOverlay(cp)} className="bg-white border border-[#EAE3D2] rounded-2xl overflow-hidden shadow-sm active:scale-95 transition-all text-left text-[#4A3728]">
-                                                                <div className="h-20 bg-stone-100 overflow-hidden text-[#4A3728]"><img src={cp.img} className="w-full h-full object-cover text-[#4A3728]" alt="" /></div>
+                                                                <div className="h-20 bg-stone-100 overflow-hidden"><img src={cp.img} className="w-full h-full object-cover" alt="" /></div>
                                                                 <div className="p-2 leading-tight text-[#4A3728]">
-                                                                    <p className="text-[10px] font-black truncate text-[#4A3728]">{cp.name}</p>
-                                                                    <p className="text-red-500 font-bold text-[8px] text-red-500">{cp.discount}</p>
+                                                                    <p className="text-[10px] font-black truncate">{cp.name}</p>
+                                                                    <p className="text-red-500 font-bold text-[8px]">{cp.discount}</p>
                                                                 </div>
                                                             </button>
                                                         ))}
@@ -575,35 +598,33 @@
                                                             <button key={cat} onClick={() => setActiveShopCategory(cat)} className={`py-1.5 text-[9px] font-black rounded transition-all ${activeShopCategory === cat ? 'bg-[#5D4037] text-white shadow-md' : 'text-[#8B5E3C]'}`}>{cat}</button>
                                                         ))}
                                                     </div>
-                                                    <div className="p-6 pt-0 flex-1 flex flex-col text-[#4A3728]">
-                                                        <h2 className="text-xs font-bold mb-6 tracking-widest uppercase font-black flex items-center gap-2 text-[#4A3728]">
+                                                    <div className="p-6 pt-0 flex-1 flex flex-col">
+                                                        <h2 className="text-xs font-bold mb-6 tracking-widest uppercase font-black flex items-center gap-2">
                                                             <Icon name="ShoppingBag" size={14}/> {activeTraveler.name} 的 {activeShopCategory} 清單
                                                         </h2>
-                                                        <div className="flex-1 space-y-3 overflow-y-auto max-h-[300px] no-scrollbar px-1 text-[#4A3728]">
-                                                            {shoppingItems.filter(item => item.category === activeShopCategory).sort((a,b) => a.purchased - b.purchased).map(item => (
-                                                                <div key={item.id} className="flex items-center gap-2 group animate-fade-in text-[#4A3728]">
-                                                                    <div className="flex-1 flex items-center justify-between p-3 bg-white border border-[#EEEAE0] rounded-xl shadow-sm hover:border-[#D6C5A0] transition-all overflow-hidden text-[#4A3728]">
+                                                        <div className="flex-1 space-y-3 overflow-y-auto max-h-[300px] no-scrollbar px-1">
+                                                            {shoppingItems
+                                                                .filter(item => item.category === activeShopCategory)
+                                                                .sort((a,b) => a.purchased - b.purchased)
+                                                                .map(item => (
+                                                                <div key={item.id} className="flex items-center gap-2 group animate-fade-in">
+                                                                    <div className="flex-1 flex items-center justify-between p-3 bg-white border border-[#EEEAE0] rounded-xl shadow-sm hover:border-[#D6C5A0] transition-all overflow-hidden">
                                                                         <div className="flex items-center gap-3 flex-1 overflow-hidden">
                                                                             <button onClick={() => togglePurchased(item.id)} className={`w-5 h-5 border-2 border-[#D6C5A0] rounded flex items-center justify-center shrink-0 transition-all ${item.purchased ? 'bg-[#5D4037] border-[#5D4037]' : 'bg-white'}`}>
                                                                                 {item.purchased && <Icon name="Check" size={12} className="text-white" />}
                                                                             </button>
-                                                                            <button onClick={() => setSelectedOverlay(item)} className={`text-[12px] text-left transition-all truncate flex-1 ${item.purchased ? 'line-through opacity-30 italic text-[#8E7D6A]' : 'font-bold text-[#4A3728]'}`}>
+                                                                            <button onClick={() => setSelectedOverlay(item)} className={`text-[12px] text-left transition-all truncate flex-1 ${item.purchased ? 'line-through opacity-30 italic text-[#8E7D6A]' : 'font-bold'}`}>
                                                                                 {item.name}
                                                                             </button>
                                                                         </div>
                                                                     </div>
-                                                                    <button 
-                                                                        onClick={(e) => { e.stopPropagation(); deleteShopItem(item.id); }} 
-                                                                        className="p-2 text-[#8B5E3C] hover:text-red-500 transition-all active:scale-90 bg-[#F5F2E9] rounded-lg border border-[#EAE3D2] shadow-sm shrink-0"
-                                                                    >
-                                                                        <Icon name="X" size={18} />
-                                                                    </button>
+                                                                    <button onClick={(e) => { e.stopPropagation(); deleteShopItem(item.id); }} className="p-2 text-[#8B5E3C] hover:text-red-500 transition-all active:scale-90 bg-[#F5F2E9] rounded-lg border border-[#EAE3D2] shadow-sm shrink-0" ><Icon name="X" size={18} /></button>
                                                                 </div>
                                                             ))}
                                                         </div>
-                                                        <form onSubmit={handleAddShopItem} className="mt-6 flex gap-2 border-t border-[#F3EFE0] pt-4 text-[#4A3728]">
-                                                            <input value={newShopItemName} onChange={e => setNewShopItemName(e.target.value)} placeholder={`新增項目...`} className="flex-1 bg-[#F9F8F6] border border-[#EAE3D2] px-3 py-2 text-[11px] rounded-xl outline-none text-[#4A3728]" />
-                                                            <button type="submit" className="bg-[#5D4037] text-white px-4 rounded-xl shadow-md active:scale-95 transition-all text-white">✢</button>
+                                                        <form onSubmit={handleAddShopItem} className="mt-6 flex gap-2 border-t border-[#F3EFE0] pt-4">
+                                                            <input value={newShopItemName} onChange={e => setNewShopItemName(e.target.value)} placeholder={`新增至 ${activeShopCategory}...`} className="flex-1 bg-[#F9F8F6] border border-[#EAE3D2] px-3 py-2 text-[11px] rounded-xl outline-none" />
+                                                            <button type="submit" className="bg-[#5D4037] text-white px-4 rounded-xl shadow-md active:scale-95 transition-all text-white font-bold text-lg">✢</button>
                                                         </form>
                                                     </div>
                                                 </div>
@@ -616,87 +637,154 @@
 
                         {/* --- 底部導覽列 --- */}
                         <nav className="fixed-nav text-[#4A3728]">
-                            <NavIconButton active={currentTab === 'itinerary'} onClick={() => setCurrentTab('itinerary')} icon="Layout" label="꒰行程♡꒱˚" />
-                            <NavIconButton active={currentTab === 'tickets'} onClick={() => setCurrentTab('tickets')} icon="Ticket" label="꒰票券⋈꒱˚" />
-                            <NavIconButton active={currentTab === 'expenses'} onClick={() => setCurrentTab('expenses')} icon="Wallet" label="꒰記帳⊱꒱˚" />
-                            <NavIconButton active={currentTab === 'stay'} onClick={() => setCurrentTab('stay')} icon="Hotel" label="꒰住宿⌁꒱" />
-                            <NavIconButton active={currentTab === 'shopping'} onClick={() => setCurrentTab('shopping')} icon="ShoppingBag" label="꒰購物✧꒱˚" />
+                            <NavIconButton active={currentTab === 'itinerary'} onClick={() => setCurrentTab('itinerary')} icon="Layout" label="行程" />
+                            <NavIconButton active={currentTab === 'tickets'} onClick={() => setCurrentTab('tickets')} icon="Ticket" label="票券" />
+                            <NavIconButton active={currentTab === 'expenses'} onClick={() => setCurrentTab('expenses')} icon="Wallet" label="記帳" />
+                            <NavIconButton active={currentTab === 'stay'} onClick={() => setCurrentTab('stay')} icon="Hotel" label="住宿" />
+                            <NavIconButton active={currentTab === 'shopping'} onClick={() => setCurrentTab('shopping')} icon="ShoppingBag" label="購物" />
                         </nav>
                         
-                        {/* Overlay 彈窗 (整合詳情) */}
+                        {/* Overlay 彈窗 */}
                         {selectedOverlay && (
                             <div className="fixed inset-0 z-[100] overlay-backdrop flex flex-col items-center justify-center p-4 animate-fade-in cursor-pointer text-[#4A3728]" onClick={() => setSelectedOverlay(null)}>
                                 <div className="w-full max-w-[340px] pointer-events-auto" onClick={(e) => e.stopPropagation()}>
-                                    <div className="bg-[#FAF9F6] p-6 rounded-[2.5rem] shadow-2xl relative border border-[#EAE3D2] text-[#4A3728] flex flex-col overflow-hidden max-h-[92vh]">
-                                        <div className="absolute inset-0 pointer-events-none opacity-[0.03] dot-grid text-[#4A3728]"></div>
-                                        
-                                        <div className="flex justify-between items-center mb-5 border-b border-[#EAE3D2] pb-4 px-1 relative z-20 shrink-0 text-[#4A3728]">
-                                            <div className="text-left flex-1"><h3 className="font-black text-lg leading-tight text-[#4A3728] text-opacity-95">{selectedOverlay.name || selectedOverlay.title}</h3><p className="text-[7px] font-bold text-[#A69076] mt-0.5 uppercase tracking-widest">{selectedOverlay.isVJW ? 'VJW Portal' : selectedOverlay.type === 'Product' ? '商品詳情' : '專屬資訊'}</p></div>
+                                    <div className="bg-[#FAF9F6] p-6 rounded-[2.5rem] shadow-2xl relative border border-[#EAE3D2] flex flex-col overflow-hidden max-h-[92vh]">
+                                        <div className="absolute inset-0 pointer-events-none opacity-[0.03] dot-grid"></div>
+                                        <div className="flex justify-between items-center mb-5 border-b border-[#EAE3D2] pb-4 px-1 relative z-20">
+                                            <div className="text-left flex-1 text-[#4A3728]"><h3 className="font-black text-lg leading-tight">{selectedOverlay.name || selectedOverlay.title}</h3><p className="text-[7px] font-bold text-[#A69076] mt-0.5 uppercase tracking-widest">{selectedOverlay.isVJW ? 'VJW Portal' : selectedOverlay.type === 'Product' ? '商品詳情' : '專屬資訊'}</p></div>
                                             <button onClick={() => setSelectedOverlay(null)} className="text-[#8B5E3C] p-2 hover:bg-stone-100 rounded-full transition-colors relative z-30 font-bold text-xl text-[#5D4037]">×</button>
                                         </div>
-
-                                        <div className="flex-1 overflow-y-auto no-scrollbar relative z-20 px-1 pb-2 text-[#4A3728]">
-                                            <div className="bg-white rounded-[2rem] overflow-hidden border border-dashed border-[#D6C5A0] p-4 shadow-inner text-[#4A3728] flex flex-col items-center min-h-[350px]">
-                                                {/* VJW 介面優先 */}
+                                        <div className="flex-1 overflow-y-auto no-scrollbar relative z-20 px-1 pb-2">
+                                            <div className="bg-white rounded-[2rem] overflow-hidden border border-dashed border-[#D6C5A0] p-4 shadow-inner flex flex-col items-center min-h-[350px]">
                                                 {selectedOverlay.isVJW ? (
                                                     <div className="p-6 w-full flex flex-col items-center text-center">
                                                         <div className="bg-orange-50 p-5 rounded-full mb-6 text-orange-400 font-bold text-4xl"><Icon name="Zap" size={48} /></div>
-                                                        <h4 className="text-sm font-black mb-2 uppercase text-[#4A3728]">Visit Japan Web</h4>
-                                                        <div className="p-3 bg-[#F9F8F6] rounded-xl border border-[#EAE3D2] w-full mb-6 text-[#4A3728]">
-                                                            <p className="text-[7px] font-black text-[#A69076] uppercase mb-1 text-center text-[#A69076]">乘客預訂編號</p>
-                                                            <p className="text-lg font-black text-[#5D4037] tracking-widest text-center text-[#5D4037]">{selectedOverlay.assignments?.[activeTraveler.id]?.code || 'N/A'}</p>
+                                                        <h4 className="text-sm font-black mb-2 uppercase">Visit Japan Web</h4>
+                                                        <div className="p-3 bg-[#F9F8F6] rounded-xl border border-[#EAE3D2] w-full mb-6">
+                                                            <p className="text-[7px] font-black text-[#A69076] uppercase mb-1 text-center">乘客預訂編號</p>
+                                                            <p className="text-lg font-black text-[#5D4037] tracking-widest text-center">{selectedOverlay.currentUserData?.code || 'N/A'}</p>
                                                         </div>
-                                                        <button onClick={(e) => { e.stopPropagation(); window.open(selectedOverlay.vjwLink); }} className="w-full bg-[#5D4037] text-white py-4 rounded-2xl font-black text-[11px] shadow-xl hover:bg-[#4A3728] transition-all active:scale-95 text-white">立即填寫</button>
+                                                        <button onClick={(e) => { e.stopPropagation(); window.open(selectedOverlay.vjwLink); }} className="w-full bg-[#5D4037] text-white py-4 rounded-2xl font-black text-[11px] shadow-xl hover:bg-[#4A3728] transition-all active:scale-95 text-white">立即前往</button>
                                                     </div>
-                                                ) : selectedOverlay.isJR ? (
-                                                    <div className="p-4 w-full text-left text-[#4A3728]">
-                                                        <p className="text-[7px] font-black text-[#8E7D6A] uppercase mb-1.5 tracking-widest opacity-60 text-[#A69076]">Reservation Details</p>
-                                                        <p className="text-lg font-black text-[#5D4037] mb-2 text-[#5D4037]">{selectedOverlay.details.no}</p>
-                                                        <p className="text-[10px] font-bold opacity-60 text-[#4A3728]">{selectedOverlay.details.notice}</p>
+                                                ) : selectedOverlay.isJR || selectedOverlay.isNozomi ? (
+                                                    <div className="p-4 w-full text-left">
+                                                        <div className="space-y-4">
+                                                            <div>
+                                                                <p className="text-[8px] font-black text-[#8E7D6A] uppercase mb-1 tracking-widest opacity-60">Reservation Info</p>
+                                                                <p className="text-2xl font-black text-[#5D4037]">{selectedOverlay.details.no}</p>
+                                                            </div>
+                                                            <div className="grid grid-cols-2 gap-4">
+                                                                <div className="bg-[#FAF9F6] p-3 rounded-xl border border-[#F3EFE0]">
+                                                                    <p className="text-[7px] font-black text-[#A69076] uppercase mb-1">人數/日期</p>
+                                                                    <p className="text-[11px] font-bold text-[#5D4037]">{selectedOverlay.details.adults || '4 人'} | {selectedOverlay.details.period || '當日有效'}</p>
+                                                                </div>
+                                                                <div className="bg-[#FAF9F6] p-3 rounded-xl border border-[#F3EFE0]">
+                                                                    <p className="text-[7px] font-black text-[#A69076] uppercase mb-1">認證</p>
+                                                                    <p className="text-[11px] font-bold text-[#5D4037]">{selectedOverlay.details.authCode || '實體卡領取'}</p>
+                                                                </div>
+                                                            </div>
+                                                            <div className="bg-[#FAF9F6] p-4 rounded-2xl border border-[#EAE3D2]">
+                                                                <p className="text-[9px] font-black text-[#8B5E3C] border-b border-[#D6C5A0] pb-2 mb-2 flex items-center gap-2"><Icon name="MapPin" size={12}/> 領取/乘車資訊</p>
+                                                                <p className="text-[11px] font-bold text-[#5D4037] leading-relaxed">{selectedOverlay.details.location || selectedOverlay.details.route}</p>
+                                                            </div>
+                                                            {selectedOverlay.details.receiveLink && (
+                                                                <button onClick={(e) => { e.stopPropagation(); window.open(selectedOverlay.details.receiveLink); }} className="w-full bg-[#8B5E3C] text-white py-3 rounded-xl font-black text-[10px] flex items-center justify-center gap-2 shadow-md active:scale-95 text-white">
+                                                                    <Icon name="ExternalLink" size={12}/> 官網領票說明
+                                                                </button>
+                                                            )}
+                                                            <div className="space-y-3 bg-[#FAF9F6] p-4 rounded-2xl border border-[#EAE3D2]">
+                                                                <p className="text-[9px] font-black text-[#8B5E3C] border-b border-[#D6C5A0] pb-2 mb-2 flex items-center gap-2"><Icon name="Package" size={10}/> 領取必備清單</p>
+                                                                <div className="flex items-start gap-3 text-[#5D4037]"><Icon name="CreditCard" size={14} className="text-[#A69076] mt-0.5" /><div className="flex-1 text-[11px] font-bold">結帳實體卡 (末碼 {selectedOverlay.details.card})</div></div>
+                                                                <div className="flex items-start gap-3 text-[#5D4037]"><Icon name="User" size={14} className="text-[#A69076] mt-0.5" /><div className="flex-1 text-[11px] font-bold whitespace-pre-line">{selectedOverlay.details.passports}</div></div>
+                                                            </div>
+                                                            <div className="bg-red-50 p-3 rounded-xl border border-red-100 flex gap-2 text-red-700">
+                                                                <Icon name="Info" size={14} className="text-red-400 shrink-0" />
+                                                                <p className="text-[10px] leading-relaxed font-bold whitespace-pre-line">{selectedOverlay.details.notice}</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ) : selectedOverlay.isHighwayBus || selectedOverlay.isSkyliner ? (
+                                                    <div className="p-4 w-full text-left">
+                                                        <div className="space-y-4">
+                                                            {selectedOverlay.currentImg && (
+                                                                <div className="w-full aspect-square bg-white rounded-2xl overflow-hidden mb-2 border border-[#EAE3D2] flex items-center justify-center shrink-0 shadow-sm">
+                                                                    <img src={selectedOverlay.currentImg} className="w-full h-full object-contain p-2" alt="Ticket Detail" />
+                                                                </div>
+                                                            )}
+                                                            <div>
+                                                                <p className="text-[8px] font-black text-[#8E7D6A] uppercase mb-1 tracking-widest opacity-60">Reservation Info</p>
+                                                                <p className="text-2xl font-black text-[#5D4037]">{selectedOverlay.details.no}</p>
+                                                            </div>
+                                                            <div className="grid grid-cols-2 gap-4">
+                                                                <div className="bg-[#FAF9F6] p-3 rounded-xl border border-[#F3EFE0]">
+                                                                    <p className="text-[7px] font-black text-[#A69076] uppercase mb-1">人數 / 效期</p>
+                                                                    <p className="text-[11px] font-bold text-[#5D4037]">{selectedOverlay.details.adults || selectedOverlay.details.tickets} | {selectedOverlay.details.validity || '當日'}</p>
+                                                                </div>
+                                                                <div className="bg-[#FAF9F6] p-3 rounded-xl border border-[#F3EFE0]">
+                                                                    <p className="text-[7px] font-black text-[#A69076] uppercase mb-1">{selectedOverlay.isSkyliner ? 'PIN 碼' : '巴士編號'}</p>
+                                                                    <p className="text-[11px] font-bold text-[#5D4037]">{selectedOverlay.details.pin || selectedOverlay.details.busNo}</p>
+                                                                </div>
+                                                            </div>
+                                                            <div className="bg-[#FAF9F6] p-4 rounded-2xl border border-[#EAE3D2]">
+                                                                <p className="text-[9px] font-black text-[#8B5E3C] border-b border-[#D6C5A0] pb-2 mb-2 flex items-center gap-2"><Icon name="MapPin" size={12}/> 路線路段</p>
+                                                                <p className="text-[11px] font-bold text-[#5D4037] leading-relaxed">{selectedOverlay.details.route}</p>
+                                                            </div>
+                                                            {selectedOverlay.isHighwayBus && (
+                                                                <button onClick={(e) => { e.stopPropagation(); window.open(selectedOverlay.details.link); }} className="w-full bg-[#5D4037] text-white py-4 rounded-xl font-black text-[11px] flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all text-white">
+                                                                    <Icon name="Ticket" size={14}/> 點此發行 Web Ticket
+                                                                </button>
+                                                            )}
+                                                            <div className="bg-orange-50 p-3 rounded-xl border border-orange-100 flex gap-2 text-orange-800">
+                                                                <Icon name="Info" size={14} className="text-orange-400 shrink-0" />
+                                                                <p className="text-[10px] leading-relaxed font-bold">{selectedOverlay.details.notice}</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ) : selectedOverlay.isUSJ ? (
+                                                    <div className="p-4 w-full text-left">
+                                                        <div className="space-y-4">
+                                                            {selectedOverlay.currentUserData?.img && (
+                                                                <div className="w-full aspect-square bg-stone-50 rounded-2xl overflow-hidden mb-2 border border-[#F3EFE0] flex items-center justify-center shadow-sm">
+                                                                    <img src={selectedOverlay.currentUserData.img} className="w-full h-full object-contain" alt="USJ Ticket" />
+                                                                </div>
+                                                            )}
+                                                            {selectedOverlay.currentUserData?.fullTicketLink && (
+                                                                <button onClick={(e) => { e.stopPropagation(); window.open(selectedOverlay.currentUserData.fullTicketLink); }} className="w-full bg-[#8B5E3C] text-white py-3 rounded-xl font-black text-[11px] flex items-center justify-center gap-2 shadow-md active:scale-95 text-white"><Icon name="Ticket" size={14}/> 點此查看完整票券</button>
+                                                            )}
+                                                            <div className="space-y-3">
+                                                                <div className="bg-blue-50 p-3 rounded-xl border border-blue-100 text-blue-900"><p className="text-[9px] font-black text-blue-800 border-b border-blue-200 pb-1.5 mb-1.5 flex items-center gap-2"><Icon name="Navigation" size={12}/> 攻略</p><p className="text-[10px] leading-relaxed font-bold whitespace-pre-line">{selectedOverlay.notices.entry}</p></div>
+                                                                <div className="bg-orange-50 p-3 rounded-xl border border-orange-100 text-orange-900"><p className="text-[9px] font-black text-orange-800 border-b border-orange-200 pb-1.5 mb-1.5 flex items-center gap-2"><Icon name="ShoppingBasket" size={12}/> 購物</p><p className="text-[10px] leading-relaxed font-bold whitespace-pre-line">【退稅】{selectedOverlay.notices.shopping}{'\n'}【爆米花】{selectedOverlay.notices.food}</p></div>
+                                                            </div>
+                                                            <button onClick={(e) => { e.stopPropagation(); window.open(selectedOverlay.mapLink); }} className="w-full border-2 border-[#5D4037] text-[#5D4037] py-3 rounded-xl font-black text-[10px] flex items-center justify-center gap-2 active:scale-95 transition-all"><Icon name="Map" size={14}/> 官方園區地圖</button>
+                                                        </div>
                                                     </div>
                                                 ) : (
                                                     <>
-                                                        {/* 圖片顯示 (lh3 直連格式) */}
                                                         {(selectedOverlay.img || selectedOverlay.currentImg || (selectedOverlay.assignments && selectedOverlay.assignments[activeTraveler.id]?.img)) && (
-                                                            <div className="w-full aspect-square bg-stone-50 rounded-2xl overflow-hidden mb-5 border border-[#F3EFE0] flex items-center justify-center shrink-0 shadow-sm text-[#4A3728]">
-                                                                <img 
-                                                                    src={selectedOverlay.img || selectedOverlay.currentImg || selectedOverlay.assignments?.[activeTraveler.id]?.img} 
-                                                                    className="w-full h-full object-contain text-[#4A3728]" 
-                                                                    alt="Detail" 
-                                                                    onError={(e) => e.target.src='https://placehold.co/400x400/EAE3D2/5D4037?text=No+Image'} 
-                                                                />
+                                                            <div className="w-full aspect-square bg-stone-50 rounded-2xl overflow-hidden mb-5 border border-[#F3EFE0] flex items-center justify-center shadow-sm">
+                                                                <img src={selectedOverlay.img || selectedOverlay.currentImg || selectedOverlay.assignments?.[activeTraveler.id]?.img} className="w-full h-full object-contain" alt="Detail" onError={(e) => e.target.src='https://placehold.co/400x400/EAE3D2/5D4037?text=No+Image'} />
                                                             </div>
                                                         )}
-
-                                                        <div className="w-full space-y-4 text-[#4A3728]">
+                                                        <div className="w-full space-y-4">
                                                             {selectedOverlay.type === 'Product' ? (
                                                                 <>
-                                                                    <div className="bg-[#FAF9F6] p-3 rounded-xl border border-[#F3EFE0]">
-                                                                        <p className="text-[10px] font-black text-[#8B5E3C] mb-1">✩ 商品簡介</p>
-                                                                        <p className="text-[11px] leading-relaxed opacity-80 text-[#4A3728]">{selectedOverlay.intro}</p>
-                                                                    </div>
-                                                                    {selectedOverlay.note && (
-                                                                        <div className="bg-orange-50/50 p-3 rounded-xl border border-orange-100">
-                                                                            <p className="text-[10px] font-black text-orange-800 mb-1">✩ 補充說明</p>
-                                                                            <p className="text-[10px] leading-relaxed opacity-80 text-orange-900">{selectedOverlay.note}</p>
-                                                                        </div>
-                                                                    )}
+                                                                    <div className="bg-[#FAF9F6] p-3 rounded-xl border border-[#F3EFE0]"><p className="text-[10px] font-black text-[#8B5E3C] mb-1">✩ 簡介</p><p className="text-[11px] leading-relaxed opacity-80">{selectedOverlay.intro}</p></div>
                                                                     <div className="space-y-2">
-                                                                        <div className="bg-[#F5F2E9]/50 p-3 rounded-lg border border-[#EAE3D2] text-center text-[#A69076]"><p className="text-[7px] font-black uppercase opacity-40 text-[#A69076]">日幣價格</p><p className="text-sm font-black text-[#5D4037]">{selectedOverlay.price}</p></div>
-                                                                        <div className="bg-[#F5F2E9]/50 p-3 rounded-lg border border-[#EAE3D2] text-center text-[#A69076]"><p className="text-[7px] font-black opacity-40 uppercase tracking-widest mb-1 tracking-tighter text-[#A69076]">哪裡買</p><p className="text-[10px] font-bold text-[#4A3728]">{selectedOverlay.store}</p></div>
+                                                                        <div className="bg-[#F5F2E9]/50 p-3 rounded-lg border border-[#EAE3D2] text-center text-[#A69076]"><p className="text-[7px] font-black uppercase opacity-40 text-[#A69076]">價格</p><p className="text-sm font-black text-[#5D4037]">{selectedOverlay.price}</p></div>
+                                                                        <div className="bg-[#F5F2E9]/50 p-3 rounded-lg border border-[#EAE3D2] text-center text-[#A69076]"><p className="text-[7px] font-black opacity-40 uppercase tracking-widest mb-1 text-[#A69076]">地點</p><p className="text-[10px] font-bold text-[#4A3728]">{selectedOverlay.store}</p></div>
                                                                     </div>
                                                                 </>
                                                             ) : (
-                                                                <div className="p-2 space-y-4 text-[#4A3728]">
+                                                                <div className="p-2 space-y-4">
                                                                     {selectedOverlay.assignments && selectedOverlay.assignments[activeTraveler.id]?.seat && (
                                                                         <div className="p-4 bg-[#F5F2E9] rounded-2xl border border-dashed border-[#D6C5A0] text-center">
-                                                                            <p className="text-[7px] font-black uppercase text-[#A69076] mb-1 text-[#A69076]">座位分配</p>
+                                                                            <p className="text-[7px] font-black uppercase text-[#A69076] mb-1">座位分配</p>
                                                                             <p className="text-lg font-black text-[#5D4037] tracking-widest">{selectedOverlay.assignments[activeTraveler.id].seat}</p>
                                                                         </div>
                                                                     )}
                                                                     <p className="text-[11px] text-center opacity-60">使用時請點擊領取並出示條碼</p>
                                                                     {selectedOverlay.externalLink && (
-                                                                        <button onClick={() => window.open(selectedOverlay.externalLink)} className="w-full bg-[#5D4037] text-white py-3 rounded-2xl flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all text-white"><Icon name="Link" size={14} className="text-white" /><span className="text-[10px] font-black text-white text-white">前往領取電子優惠券</span></button>
+                                                                        <button onClick={() => window.open(selectedOverlay.externalLink)} className="w-full bg-[#5D4037] text-white py-3 rounded-2xl flex items-center justify-center gap-2 shadow-lg text-white">前往領取電子券</button>
                                                                     )}
                                                                 </div>
                                                             )}
@@ -704,7 +792,7 @@
                                                     </>
                                                 )}
                                             </div>
-                                            <p className="text-[7px] text-center mt-6 opacity-40 font-bold tracking-[0.2em] italic text-[#5D4037]">點擊空白處或上方關閉返回列表</p>
+                                            <p className="text-[7px] text-center mt-6 opacity-40 font-bold tracking-[0.2em] italic">點擊空白處或上方關閉返回列表</p>
                                         </div>
                                     </div>
                                 </div>
@@ -715,9 +803,8 @@
             );
         };
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
+        const root = window.ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
-                /* 藥妝、美妝完成 行程、票券、記帳、住宿皆齊全*/
     </script>
 </body>
 </html>
