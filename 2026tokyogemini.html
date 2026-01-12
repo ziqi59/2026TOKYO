@@ -204,8 +204,46 @@
             },
             { id: 'tk5', type: 'Bus', title: '高速巴士 往程 (1101 班次)', date: '1/19 07:15', isHighwayBus: true, details: { no: '1101', busNo: '1', route: '新宿總站 ➔ 富士山站', tickets: '大人 4 人', link: 'https://www.highwaybus.com/gp/inbound/inbWebticketPrint?3646e9862c4c4fbcfc3636dd722fb157&lang=CZ1&ticket_type=mobile#1', notice: '請點選下方連結發行 Web Ticket。' } },
             { id: 'tk6', type: 'Bus', title: '高速巴士 返程 (1124 班次)', date: '1/19 16:40', isHighwayBus: true, details: { no: '1124', busNo: '1', route: '河口湖站 ➔ 新宿總站', tickets: '大人 4 人', link: 'https://www.highwaybus.com/gp/inbound/inbWebticketPrint?3646e9862c4c4fbcfc3636dd722fb157&lang=CZ1&ticket_type=mobile#2', notice: '請點選下方連結發行 Web Ticket。' } },
-            { id: 'tk7', type: 'Train', title: '新幹線 Kagayaki 519 (東京→長野)', date: '1/19 21:04', assignments: { zhi: { seat: '6號車 17號 D位' }, spasm: { seat: '6號車 17號 E位' }, penguin: { seat: '6號車 18號 D位' }, goldfish: { seat: '6號車 18號 E位' } } },
-            { id: 'tk8', type: 'Train', title: '新幹線 Kagayaki 504 (長野→上野)', date: '1/22 09:17', assignments: { zhi: { seat: '8號車 18號 D位' }, spasm: { seat: '8號車 18號 E位' }, penguin: { seat: '8號車 19號 D位' }, goldfish: { seat: '8號車 19號 E位' } } },
+            { 
+                id: 'tk7', 
+                type: 'Train', 
+                title: '新幹線 Kagayaki 519 (東京→長野)', 
+                date: '1/19 21:04', 
+                isJR: true,
+                assignments: { 
+                    zhi: { seat: '6號車 17番 D席', ic: 'JE80FF22100821739' }, 
+                    spasm: { seat: '6號車 17番 E席', ic: 'JE80F426011129764' }, 
+                    penguin: { seat: '6號車 18番 D席', ic: 'JE80F225121815219' }, 
+                    goldfish: { seat: '6號車 18番 E席', ic: 'JE80F624101015078' } 
+                },
+                details: {
+                    no: 'E82632',
+                    route: 'TOKYO (21:04) ➔ NAGANO (22:23)',
+                    adults: '4 人',
+                    authCode: '新幹線電子票 (IC乘車)',
+                    notice: '1. 本次為新幹線電子票。\n2. 請持下方綁定之 IC 卡直接感應進站。\n3. 無須換票。'
+                }
+            },
+            { 
+                id: 'tk8', 
+                type: 'Train', 
+                title: '新幹線 Kagayaki 504 (長野→上野)', 
+                date: '1/22 09:17', 
+                isJR: true,
+                assignments: { 
+                    zhi: { seat: '8號車 18番 D席', ic: 'JE80FF22100821739' }, 
+                    spasm: { seat: '8號車 18番 E席', ic: 'JE80F426011129764' }, 
+                    penguin: { seat: '8號車 19番 D席', ic: 'JE80F225121815219' }, 
+                    goldfish: { seat: '8號車 19番 E席', ic: 'JE80F624101015078' } 
+                },
+                details: {
+                    no: 'E77042',
+                    route: 'NAGANO (09:17) ➔ UENO (10:31)',
+                    adults: '4 人',
+                    authCode: '新幹線電子票 (IC乘車)',
+                    notice: '1. 本次為新幹線電子票。\n2. 請持下方綁定之 IC 卡直接感應進站。\n3. 無須換票。'
+                }
+            },
             { 
                 id: 'tk9', 
                 type: 'Ticket', 
@@ -249,7 +287,7 @@
                 { id: '17_4', dateIndex: 2, startTime: '11:00', name: '前往京都', address: 'JR 奈良站', category: 'Transport', note: 'JR奈良站→ JR京都站 搭乘:JR 奈良線快速(45min)' },
                 { id: '17_5', dateIndex: 2, startTime: '12:00', name: '錦市場吃午餐', address: '錦市場', category: 'Food', note: '京都站→ 四条站 搭乘:京都市營地下鐵烏丸線(4min)\n四条站→ 錦市場(走5min)' },
                 { id: '17_6', dateIndex: 2, startTime: '13:30', name: '逛街', address: '二年坂 三年坂', category: 'Shopping', note: '花見小路、二年坂 三年坂 散步\n預計18:20離開' },
-                { id: '17_7', dateIndex: 2, startTime: '19:00', name: '六角ACE', address: '六角ACE', category: 'Food', note: '確認號碼: 45NRRF\n✧烏丸御池站 5號出口左轉，步行10min ⸝⸝✧17:00-23:00\n✩—aceのポテサラ 580円 糖心蛋馬鈴薯\n✩—ハラミステーキ 1180円 裙子牛排\n✩—とうもろこしの唐揚 600円 炸玉米\n✩—キウイサワー 580円 奇異果沙瓦' },
+                { id: '17_7', dateIndex: 2, startTime: '19:00', name: '六角ACE', address: '六角ACE', category: 'Food', note: '確認號碼: 45NRRF\n✧烏丸御池站 5號出口左轉，步行10min ⸝⸝✧17:00-23:00\n✩—aceのポテサラ 580円 糖心蛋馬鈴薯\n✩—ハラミステーキ 1180円 裙子牛排\n✩—とう望ろこしの唐揚 600円 炸玉米\n✩—キウイサワー 580円 奇異果沙瓦' },
                 { id: '17_8', dateIndex: 2, startTime: '20:30', name: '回梅田', address: 'JR 京都站', category: 'Transport', note: '京都 → 梅田 搭乘:JR 京都線（新快速）(30min)' },
                 { id: '17_9', dateIndex: 2, startTime: '住宿', name: '大阪住處', address: 'Apartment Hotel 11 Higashi Umeda', category: 'Hotel', note: '今天要整理行李啦' },
 
@@ -728,26 +766,36 @@
                                                                     <p className="text-[11px] font-bold text-[#5D4037]">{selectedOverlay.details.adults || '4 人'} | {selectedOverlay.details.period || '當日有效'}</p>
                                                                 </div>
                                                                 <div className="bg-[#FAF9F6] p-3 rounded-xl border border-[#F3EFE0]">
-                                                                    <p className="text-[7px] font-black text-[#A69076] uppercase mb-1">認證</p>
+                                                                    <p className="text-[7px] font-black text-[#A69076] uppercase mb-1">認證方式</p>
                                                                     <p className="text-[11px] font-bold text-[#5D4037]">{selectedOverlay.details.authCode || '實體卡領取'}</p>
                                                                 </div>
                                                             </div>
                                                             <div className="bg-[#FAF9F6] p-4 rounded-2xl border border-[#EAE3D2]">
-                                                                <p className="text-[9px] font-black text-[#8B5E3C] border-b border-[#D6C5A0] pb-2 mb-2 flex items-center gap-2"><Icon name="MapPin" size={12}/> 領取/乘車資訊</p>
-                                                                <p className="text-[11px] font-bold text-[#5D4037] leading-relaxed">{selectedOverlay.details.location || selectedOverlay.details.route}</p>
+                                                                <p className="text-[9px] font-black text-[#8B5E3C] border-b border-[#D6C5A0] pb-2 mb-2 flex items-center gap-2"><Icon name="MapPin" size={12}/> 區間 / 路線</p>
+                                                                <p className="text-[11px] font-bold text-[#5D4037] leading-relaxed">{selectedOverlay.details.route}</p>
                                                             </div>
-                                                            {selectedOverlay.details.receiveLink && (
-                                                                <button onClick={(e) => { e.stopPropagation(); window.open(selectedOverlay.details.receiveLink); }} className="w-full bg-[#8B5E3C] text-white py-3 rounded-xl font-black text-[10px] flex items-center justify-center gap-2 shadow-md active:scale-95 text-white">
-                                                                    <Icon name="ExternalLink" size={12}/> 官網領票說明
-                                                                </button>
+                                                            
+                                                            {/* 新增個人專屬資料區 */}
+                                                            {selectedOverlay.currentUserData && (
+                                                                <div className="bg-[#5D4037] p-4 rounded-2xl border border-[#5D4037] text-white shadow-md">
+                                                                    <p className="text-[9px] font-black opacity-60 uppercase mb-2 flex items-center gap-2 border-b border-white/20 pb-2"><Icon name="User" size={12}/> {activeTraveler.name} 專屬位次</p>
+                                                                    <div className="flex justify-between items-center">
+                                                                        <div>
+                                                                            <p className="text-[7px] uppercase opacity-60">指定座席</p>
+                                                                            <p className="text-lg font-black tracking-widest">{selectedOverlay.currentUserData.seat}</p>
+                                                                        </div>
+                                                                        {selectedOverlay.currentUserData.ic && (
+                                                                            <div className="text-right">
+                                                                                <p className="text-[7px] uppercase opacity-60">綁定 IC 編號</p>
+                                                                                <p className="text-[9px] font-mono opacity-90">{selectedOverlay.currentUserData.ic}</p>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
                                                             )}
-                                                            <div className="space-y-3 bg-[#FAF9F6] p-4 rounded-2xl border border-[#EAE3D2]">
-                                                                <p className="text-[9px] font-black text-[#8B5E3C] border-b border-[#D6C5A0] pb-2 mb-2 flex items-center gap-2"><Icon name="Package" size={10}/> 領取必備清單</p>
-                                                                <div className="flex items-start gap-3 text-[#5D4037]"><Icon name="CreditCard" size={14} className="text-[#A69076] mt-0.5" /><div className="flex-1 text-[11px] font-bold">結帳實體卡 (末碼 {selectedOverlay.details.card})</div></div>
-                                                                <div className="flex items-start gap-3 text-[#5D4037]"><Icon name="User" size={14} className="text-[#A69076] mt-0.5" /><div className="flex-1 text-[11px] font-bold whitespace-pre-line">{selectedOverlay.details.passports}</div></div>
-                                                            </div>
-                                                            <div className="bg-red-50 p-3 rounded-xl border border-red-100 flex gap-2 text-red-700">
-                                                                <Icon name="Info" size={14} className="text-red-400 shrink-0" />
+
+                                                            <div className="bg-orange-50 p-3 rounded-xl border border-orange-100 flex gap-2 text-orange-700">
+                                                                <Icon name="Info" size={14} className="text-orange-400 shrink-0" />
                                                                 <p className="text-[10px] leading-relaxed font-bold whitespace-pre-line">{selectedOverlay.details.notice}</p>
                                                             </div>
                                                         </div>
