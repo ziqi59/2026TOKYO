@@ -158,19 +158,20 @@
             { 
                 id: 'tk2', 
                 type: 'Pass', 
-                title: '關西地區鐵路周遊券', 
+                title: '關西地區鐵路周遊券 (3日)', 
                 date: '1/15', 
                 isJR: true, 
                 details: { 
                     no: '40376', 
+                    acceptId: 'ADD0534L',
                     card: '1668 (實體卡)', 
-                    authCode: '自備 4 碼', 
-                    passports: '所有使用者護照正本 (4人)\n(可以把1/18票券一同領取)', 
+                    authCode: '0509', 
+                    passports: '所有使用者護照正本 (4人)', 
                     period: '1/15 - 1/17 有效', 
                     location: 'Kansai-airport (關西機場站)', 
                     receiveInfo: '車站窗口或驗票口外售票機 (綠色機台含護照掃描功能)',
                     receiveLink: 'https://www.westjr.co.jp/global/tc/howto/train-reservation/receive/',
-                    notice: '1. 必須在 1/15 (含) 之前領取。\n2. 不接受虛擬卡，需出示結帳實體信用卡。\n3. 驗票口內售票機無法領取。' 
+                    notice: '1. 必須在 1/15 (含) 之前領取。\n2. 必備：結帳實體信用卡(1668) + 認證編號(0509) + 護照。\n3. 不接受虛擬卡，需出示實體信用卡。\n4. 驗票口內售票機無法領取。' 
                 } 
             },
             { 
@@ -287,7 +288,7 @@
                 { id: '17_4', dateIndex: 2, startTime: '11:00', name: '前往京都', address: 'JR 奈良站', category: 'Transport', note: 'JR奈良站→ JR京都站 搭乘:JR 奈良線快速(45min)' },
                 { id: '17_5', dateIndex: 2, startTime: '12:00', name: '錦市場吃午餐', address: '錦市場', category: 'Food', note: '京都站→ 四条站 搭乘:京都市營地下鐵烏丸線(4min)\n四条站→ 錦市場(走5min)' },
                 { id: '17_6', dateIndex: 2, startTime: '13:30', name: '逛街', address: '二年坂 三年坂', category: 'Shopping', note: '花見小路、二年坂 三年坂 散步\n預計18:20離開' },
-                { id: '17_7', dateIndex: 2, startTime: '19:00', name: '六角ACE', address: '六角ACE', category: 'Food', note: '確認號碼: 45NRRF\n✧烏丸御池站 5號出口左轉，步行10min ⸝⸝✧17:00-23:00\n✩—aceのポテサラ 580円 糖心蛋馬鈴薯\n✩—ハラミステーキ 1180円 裙子牛排\n✩—とう望ろこしの唐揚 600円 炸玉米\n✩—キウイサワー 580円 奇異果沙瓦' },
+                { id: '17_7', dateIndex: 2, startTime: '19:00', name: '六角ACE', address: '六角ACE', category: 'Food', note: '確認號碼: 45NRRF\n✧烏丸御池站 5號出口左轉，步行10min ⸝⸝✧17:00-23:00\n✩—aceのポテサラ 580円 糖心蛋馬鈴薯\n✩—ハラミステーキ 1180円 裙子牛排\n✩—とう望ろこしの唐揚 600円 炸玉米\n✩—キウ異果沙瓦 580円' },
                 { id: '17_8', dateIndex: 2, startTime: '20:30', name: '回梅田', address: 'JR 京都站', category: 'Transport', note: '京都 → 梅田 搭乘:JR 京都線（新快速）(30min)' },
                 { id: '17_9', dateIndex: 2, startTime: '住宿', name: '大阪住處', address: 'Apartment Hotel 11 Higashi Umeda', category: 'Hotel', note: '今天要整理行李啦' },
 
@@ -329,7 +330,6 @@
                 { id: '22_2', dateIndex: 7, startTime: '10:45', name: '日暮里轉乘', address: 'JR上野', category: 'Transport', note: '10:47 JR上野Ueno→ 10:50 JR日暮里Nippori' },
                 { id: '22_3', dateIndex: 7, startTime: '11:05', name: '前往成田機場', address: 'JR日暮里', category: 'Transport', note: '日暮里Nippori → 成田機場 搭乘:Skyliner\n\n【注意事項】\n1.持QR Code至售票機換實體票。\n2.日暮里轉乘需經過專用改札口。' },
                 { id: '22_4', dateIndex: 7, startTime: '12:30', name: '成田機場逛伴手禮', address: '成田機場', category: 'Shopping', note: '預計13:30過海關' },
-                { id: '22_5', dateIndex: 7, startTime: '住宿', name: '長野住處', address: 'Sotetsu Fresa Inn', category: 'Hotel', note: '善光寺口 步行約 2 分鐘\n今天要整理行李' },
                 { id: '22_6', dateIndex: 7, startTime: '15:30', name: '搭乘國泰航空', address: '東京機場', category: 'Flight', note: '15:30-18:40\n東京二航→ 台北一航\n國泰CX451 波音 777-300' }
             ];
 
@@ -759,6 +759,9 @@
                                                             <div>
                                                                 <p className="text-[8px] font-black text-[#8E7D6A] uppercase mb-1 tracking-widest opacity-60">Reservation Info</p>
                                                                 <p className="text-2xl font-black text-[#5D4037]">{selectedOverlay.details.no}</p>
+                                                                {selectedOverlay.details.acceptId && (
+                                                                    <p className="text-[10px] font-bold text-[#A69076]">受理ID: {selectedOverlay.details.acceptId}</p>
+                                                                )}
                                                             </div>
                                                             <div className="grid grid-cols-2 gap-4">
                                                                 <div className="bg-[#FAF9F6] p-3 rounded-xl border border-[#F3EFE0]">
@@ -766,36 +769,26 @@
                                                                     <p className="text-[11px] font-bold text-[#5D4037]">{selectedOverlay.details.adults || '4 人'} | {selectedOverlay.details.period || '當日有效'}</p>
                                                                 </div>
                                                                 <div className="bg-[#FAF9F6] p-3 rounded-xl border border-[#F3EFE0]">
-                                                                    <p className="text-[7px] font-black text-[#A69076] uppercase mb-1">認證方式</p>
-                                                                    <p className="text-[11px] font-bold text-[#5D4037]">{selectedOverlay.details.authCode || '實體卡領取'}</p>
+                                                                    <p className="text-[7px] font-black text-[#A69076] uppercase mb-1">認證編號</p>
+                                                                    <p className="text-[11px] font-bold text-[#5D4037] tracking-widest">{selectedOverlay.details.authCode || '實體卡領取'}</p>
                                                                 </div>
                                                             </div>
                                                             <div className="bg-[#FAF9F6] p-4 rounded-2xl border border-[#EAE3D2]">
-                                                                <p className="text-[9px] font-black text-[#8B5E3C] border-b border-[#D6C5A0] pb-2 mb-2 flex items-center gap-2"><Icon name="MapPin" size={12}/> 區間 / 路線</p>
-                                                                <p className="text-[11px] font-bold text-[#5D4037] leading-relaxed">{selectedOverlay.details.route}</p>
+                                                                <p className="text-[9px] font-black text-[#8B5E3C] border-b border-[#D6C5A0] pb-2 mb-2 flex items-center gap-2"><Icon name="MapPin" size={12}/> 領取/乘車資訊</p>
+                                                                <p className="text-[11px] font-bold text-[#5D4037] leading-relaxed">{selectedOverlay.details.location || selectedOverlay.details.route}</p>
                                                             </div>
-                                                            
-                                                            {/* 新增個人專屬資料區 */}
-                                                            {selectedOverlay.currentUserData && (
-                                                                <div className="bg-[#5D4037] p-4 rounded-2xl border border-[#5D4037] text-white shadow-md">
-                                                                    <p className="text-[9px] font-black opacity-60 uppercase mb-2 flex items-center gap-2 border-b border-white/20 pb-2"><Icon name="User" size={12}/> {activeTraveler.name} 專屬位次</p>
-                                                                    <div className="flex justify-between items-center">
-                                                                        <div>
-                                                                            <p className="text-[7px] uppercase opacity-60">指定座席</p>
-                                                                            <p className="text-lg font-black tracking-widest">{selectedOverlay.currentUserData.seat}</p>
-                                                                        </div>
-                                                                        {selectedOverlay.currentUserData.ic && (
-                                                                            <div className="text-right">
-                                                                                <p className="text-[7px] uppercase opacity-60">綁定 IC 編號</p>
-                                                                                <p className="text-[9px] font-mono opacity-90">{selectedOverlay.currentUserData.ic}</p>
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
-                                                                </div>
+                                                            {selectedOverlay.details.receiveLink && (
+                                                                <button onClick={(e) => { e.stopPropagation(); window.open(selectedOverlay.details.receiveLink); }} className="w-full bg-[#8B5E3C] text-white py-3 rounded-xl font-black text-[10px] flex items-center justify-center gap-2 shadow-md active:scale-95 text-white">
+                                                                    <Icon name="ExternalLink" size={12}/> 官網領票說明
+                                                                </button>
                                                             )}
-
-                                                            <div className="bg-orange-50 p-3 rounded-xl border border-orange-100 flex gap-2 text-orange-700">
-                                                                <Icon name="Info" size={14} className="text-orange-400 shrink-0" />
+                                                            <div className="space-y-3 bg-[#FAF9F6] p-4 rounded-2xl border border-[#EAE3D2]">
+                                                                <p className="text-[9px] font-black text-[#8B5E3C] border-b border-[#D6C5A0] pb-2 mb-2 flex items-center gap-2"><Icon name="Package" size={10}/> 領取必備清單</p>
+                                                                <div className="flex items-start gap-3 text-[#5D4037]"><Icon name="CreditCard" size={14} className="text-[#A69076] mt-0.5" /><div className="flex-1 text-[11px] font-bold">結帳實體卡 (末碼 {selectedOverlay.details.card})</div></div>
+                                                                <div className="flex items-start gap-3 text-[#5D4037]"><Icon name="User" size={14} className="text-[#A69076] mt-0.5" /><div className="flex-1 text-[11px] font-bold whitespace-pre-line">{selectedOverlay.details.passports}</div></div>
+                                                            </div>
+                                                            <div className="bg-red-50 p-3 rounded-xl border border-red-100 flex gap-2 text-red-700">
+                                                                <Icon name="Info" size={14} className="text-red-400 shrink-0" />
                                                                 <p className="text-[10px] leading-relaxed font-bold whitespace-pre-line">{selectedOverlay.details.notice}</p>
                                                             </div>
                                                         </div>
@@ -868,7 +861,7 @@
                                                                     <div className="bg-[#FAF9F6] p-3 rounded-xl border border-[#F3EFE0]"><p className="text-[10px] font-black text-[#8B5E3C] mb-1">✩ 簡介</p><p className="text-[11px] leading-relaxed opacity-80">{selectedOverlay.intro}</p></div>
                                                                     <div className="space-y-2">
                                                                         <div className="bg-[#F5F2E9]/50 p-3 rounded-lg border border-[#EAE3D2] text-center text-[#A69076]"><p className="text-[7px] font-black uppercase opacity-40 text-[#A69076]">價格</p><p className="text-sm font-black text-[#5D4037]">{selectedOverlay.price}</p></div>
-                                                                        <div className="bg-[#F5F2E9]/50 p-3 rounded-lg border border-[#EAE3D2] text-center text-[#A69076]"><p className="text-[7px] font-black opacity-40 uppercase tracking-widest mb-1 text-[#A69076]">地點</p><p className="text-[10px] font-bold text-[#4A3728]">{selectedOverlay.store}</p></div>
+                                                                        <div className="bg-[#F5F2E9]/50 p-3 rounded-lg border border-[#EAE3D2] text-center text-[#A69076]"><p className="text-[7px] font-black uppercase tracking-widest mb-1 text-[#A69076]">地點</p><p className="text-[10px] font-bold text-[#4A3728]">{selectedOverlay.store}</p></div>
                                                                     </div>
                                                                 </>
                                                             ) : (
